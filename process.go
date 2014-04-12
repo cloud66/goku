@@ -100,6 +100,7 @@ func (p *Process) startProcessByExec() error {
 
 	p.Pid = cmd.Process.Pid
 	p.x = cmd.Process
+	
 	return nil
 }
 

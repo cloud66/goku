@@ -15,7 +15,7 @@ func TestStart(t *testing.T) {
 		Name: "test",
 		Directory: "/bin",
 		Command: "sleep",
-		Args: []string{ "1" },
+		Args: []string{ "7" },
 	}
 
 	err := p.Start()
@@ -31,7 +31,7 @@ func TestStart(t *testing.T) {
 		t.Error("No process found")
 	}
 
-	time.Sleep(15 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	proc, err = os.FindProcess(p.Pid)
 	if err != nil {
