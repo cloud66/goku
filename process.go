@@ -55,17 +55,17 @@ func (p *Process) Start() error {
 	glog.Infof("Starting process '%s' Timestamp: %d Uid:%s", p.Name, p.timestamp, p.Uid)
 
 	// now start it
-	err = p.startProcessByExec()
+	cmd, err := p.startProcessByExec()
 	if err != nil {
 		return err
 	}
 
-	glog.Infof("Process '%s' started. Pid: %d", p.Name, p.Pid)
+	go p.waitForProcess(cmd)
 
 	return nil
 }
 
-func (p *Process) startProcessByExec() error {
+func (p *Process) startProcessByExec() (*exec.Cmd, error) {
 	var envs []string
 	if p.UseEnv {
 		envs = os.Environ()
@@ -77,31 +77,41 @@ func (p *Process) startProcessByExec() error {
 	errLog := filepath.Join(LogFolder, p.Name + "_stderr_" + strconv.FormatInt(p.timestamp, 10) + ".log")
 	outLogFile, err := getLogfile(outLog)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	errLogFile, err := getLogfile(errLog)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	cmd := exec.Cmd{
 		Path: p.Command,
 		Args: append([]string{p.Command}, p.Args...),
-		Stdin: os.Stdin,
 		Dir: p.Directory,
+		Stdin: os.Stdin,
 		Stdout: outLogFile,
 		Stderr: errLogFile,
 		Env: envs,
 	}
 	err = cmd.Start()
 	if err != nil {
-		return err
+		return &cmd, err
 	}
 
 	p.Pid = cmd.Process.Pid
 	p.x = cmd.Process
-	
-	return nil
+
+	glog.Infof("Process '%s' started. Pid: %d", p.Name, p.Pid)
+
+	return &cmd, nil
+}
+
+func (p *Process) waitForProcess(cmd *exec.Cmd) {
+	cmd.Process.Wait()
+	cmd.Process.Kill()
+	cmd.Process.Release()
+
+	glog.Infof("Process '%s' finished.", p.Name)
 }
 
 func (p *Process) startProcessByOs() error {
@@ -133,7 +143,7 @@ func (p *Process) startProcessByOs() error {
 		},
 	}
 
-	proc, err := os.StartProcess(p.Command, p.Args, attr)
+	proc, err := os.StartProcess(p.Command, append([]string{p.Command}, p.Args...), attr)
 	if err != nil {
 		return err
 	}
