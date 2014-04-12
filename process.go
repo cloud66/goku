@@ -84,12 +84,15 @@ func (p *Process) startProcessByExec() error {
 		return err
 	}
 
-	cmd := exec.Command(p.Command, p.Args...)
-	cmd.Stdin = os.Stdin
-	cmd.Dir = p.Directory
-	cmd.Stdout = outLogFile
-	cmd.Stderr = errLogFile
-	cmd.Env = envs
+	cmd := exec.Cmd{
+		Path: p.Command,
+		Args: append([]string{p.Command}, p.Args...),
+		Stdin: os.Stdin,
+		Dir: p.Directory,
+		Stdout: outLogFile,
+		Stderr: errLogFile,
+		Env: envs,
+	}
 	err = cmd.Start()
 	if err != nil {
 		return err
