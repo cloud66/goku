@@ -63,6 +63,7 @@ func (p *Process) Start() error {
 	glog.Infof("Starting process '%s' Timestamp: %d Uid:%s", p.Name, p.timestamp, p.Uid)
 
 	if len(p.StopSequence) == 0 {
+		glog.Info("Using the default StopSeuqnce")
 		p.StopSequence = defaultStopSequence
 	}
 
