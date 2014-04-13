@@ -36,8 +36,11 @@ type Process struct {
 	Command		 	string
 	Args					[]string
 	Directory		 string
+	// signals to send and wait expecting the process to die
 	StopSequence	[]Instruction
-	DrainSequence []Instruction
+	// signal to start the drain.
+	// we then wait until we start the stop sequence
+	DrainSignal   Instruction
 	UseEnv				bool
 	Envs					[]string
 	AllowDrain		bool
@@ -105,6 +108,18 @@ func (p *Process) Stop() error {
 	if p.IsRunning() {
 		return errors.New("cannot stop the process")
 	}
+
+	return nil
+}
+
+// send the drain signal and waits
+func (p *Process) Drain() error {
+	err := p.x.Signal(p.DrainSignal.Signal)
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(p.DrainSignal.Wait * time.Second)
 
 	return nil
 }
