@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"time"
 	"strconv"
+	"syscall"
 	"path/filepath"
 
 	"github.com/golang/glog"
@@ -38,6 +39,7 @@ type Process struct {
 
 	x						 *os.Process
 	timestamp		 int64
+	cmd					 *exec.Cmd
 }
 
 func (p *Process) Start() error {
@@ -55,17 +57,17 @@ func (p *Process) Start() error {
 	glog.Infof("Starting process '%s' Timestamp: %d Uid:%s", p.Name, p.timestamp, p.Uid)
 
 	// now start it
-	cmd, err := p.startProcessByExec()
+	err = p.startProcessByExec()
 	if err != nil {
 		return err
 	}
 
-	go p.waitForProcess(cmd)
+	go p.waitForProcess()
 
 	return nil
 }
 
-func (p *Process) startProcessByExec() (*exec.Cmd, error) {
+func (p *Process) startProcessByExec() error {
 	var envs []string
 	if p.UseEnv {
 		envs = os.Environ()
@@ -77,11 +79,11 @@ func (p *Process) startProcessByExec() (*exec.Cmd, error) {
 	errLog := filepath.Join(LogFolder, p.Name + "_stderr_" + strconv.FormatInt(p.timestamp, 10) + ".log")
 	outLogFile, err := getLogfile(outLog)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	errLogFile, err := getLogfile(errLog)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	cmd := exec.Cmd{
@@ -95,63 +97,34 @@ func (p *Process) startProcessByExec() (*exec.Cmd, error) {
 	}
 	err = cmd.Start()
 	if err != nil {
-		return &cmd, err
+		return err
 	}
 
 	p.Pid = cmd.Process.Pid
 	p.x = cmd.Process
+	p.cmd = &cmd
 
 	glog.Infof("Process '%s' started. Pid: %d", p.Name, p.Pid)
 
-	return &cmd, nil
-}
-
-func (p *Process) waitForProcess(cmd *exec.Cmd) {
-	cmd.Process.Wait()
-	cmd.Process.Kill()
-	cmd.Process.Release()
-
-	glog.Infof("Process '%s' finished.", p.Name)
-}
-
-func (p *Process) startProcessByOs() error {
-	var envs []string
-	if p.UseEnv {
-		envs = os.Environ()
-	} else {
-		envs = p.Envs
-	}
-
-	outLog := filepath.Join(LogFolder, p.Name + "_stdout_" + strconv.FormatInt(p.timestamp, 10) + ".log")
-	errLog := filepath.Join(LogFolder, p.Name + "_stderr_" + strconv.FormatInt(p.timestamp, 10) + ".log")
-	outLogFile, err := getLogfile(outLog)
-	if err != nil {
-		return err
-	}
-	errLogFile, err := getLogfile(errLog)
-	if err != nil {
-		return err
-	}
-
-	attr := &os.ProcAttr{
-		Dir: p.Directory,
-		Env: envs,
-		Files: []*os.File{
-			os.Stdin,
-			outLogFile,
-			errLogFile,
-		},
-	}
-
-	proc, err := os.StartProcess(p.Command, append([]string{p.Command}, p.Args...), attr)
-	if err != nil {
-		return err
-	}
-
-	p.x = proc
-	p.Pid = proc.Pid
-
 	return nil
+}
+
+func (p *Process) waitForProcess() {
+	glog.Infof("Watching close of process '%s'", p.Name)
+
+	p.cmd.Process.Wait()
+	p.cmd.Process.Kill()
+	p.cmd.Process.Release()
+
+	glog.Infof("Process '%s' closed.", p.Name)
+}
+
+func (p *Process) IsRunning() bool {
+	if err := syscall.Kill(p.Pid, 0); err != nil {
+		return false
+	} else {
+		return true
+	}
 }
 
 func getLogfile(path string) (*os.File, error) {

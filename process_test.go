@@ -4,6 +4,7 @@ import (
 	"testing"
 	"os"
 	"time"
+	"flag"
 )
 
 func init() {
@@ -11,11 +12,13 @@ func init() {
 }
 
 func TestStart(t *testing.T) {
+	flag.Set("alsologtostderr", "true")
+
 	p := Process{
 		Name: "test",
 		Directory: "/bin",
 		Command: "sleep",
-		Args: []string{ "7" },
+		Args: []string{ "1" },
 	}
 
 	err := p.Start()
@@ -23,35 +26,13 @@ func TestStart(t *testing.T) {
 		t.Error(err)
 	}
 
-	proc, err := os.FindProcess(p.Pid)
-	if err != nil {
-		t.Error(err)
-	}
-	if proc.Pid == 0 {
-		t.Error("No process found")
+	if !p.IsRunning() {
+		t.Error("Process not running")
 	}
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(1100 * time.Millisecond)
 
-	proc, err = os.FindProcess(p.Pid)
-	if err != nil {
-		t.Error(err)
-	}
-	if proc.Pid == 0 {
-		t.Error("No process found")
-	}
-}
-
-func TestStartWithDirectory(t *testing.T) {
-	p := Process{
-		Name: "test1",
-		Directory: "tests",
-		Command: "test.sh",
-		Args: []string{ "abc" },
-	}
-
-	err := p.Start()
-	if err != nil {
-		t.Error(err)
+	if p.IsRunning() {
+		t.Error("Process is running")
 	}
 }
