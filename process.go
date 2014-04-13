@@ -6,6 +6,7 @@ import (
 	"time"
 	"strconv"
 	"syscall"
+	"errors"
 	"path/filepath"
 
 	"github.com/golang/glog"
@@ -20,6 +21,11 @@ const (
 type Instruction struct {
 	Signal		os.Signal
 	Wait			time.Duration
+}
+
+var defaultStopSequence = []Instruction{
+	{ Signal: syscall.SIGQUIT, Wait: 5 },
+	{ Signal: syscall.SIGKILL, Wait: 0 },
 }
 
 type Process struct {
@@ -56,6 +62,10 @@ func (p *Process) Start() error {
 	p.Uid = uid.String()
 	glog.Infof("Starting process '%s' Timestamp: %d Uid:%s", p.Name, p.timestamp, p.Uid)
 
+	if len(p.StopSequence) == 0 {
+		p.StopSequence = defaultStopSequence
+	}
+
 	// now start it
 	err = p.startProcessByExec()
 	if err != nil {
@@ -63,6 +73,57 @@ func (p *Process) Start() error {
 	}
 
 	go p.waitForProcess()
+
+	return nil
+}
+
+func (p *Process) Stop() error {
+	for _, item := range p.StopSequence {
+		glog.Infof("Sending %s to %d", item.Signal, p.Pid)
+		err := p.sendSignalAndWait(item)
+		if err != nil {
+			return err
+		}
+
+		// is it running?
+		if !p.IsRunning() {
+			glog.Infof("Process '%s' stopped", p.Name)
+			return nil
+		}
+	}
+
+	// still running? use force
+	if p.IsRunning() {
+		glog.Infof("Process '%s' still running trying force", p.Name)
+		//p.x.Kill()
+		//p.x.Release()
+	}
+
+	// still running?
+	if p.IsRunning() {
+		return errors.New("cannot stop the process")
+	}
+
+	return nil
+}
+
+func (p *Process) IsRunning() bool {
+	if err := syscall.Kill(p.Pid, 0); err != nil {
+		return false
+	} else {
+		return true
+	}
+}
+
+func (p *Process) sendSignalAndWait(instruction Instruction) error {
+	// send
+	err := p.x.Signal(instruction.Signal)
+	if err != nil {
+		return err
+	}
+
+	// wait
+	time.Sleep(instruction.Wait * time.Second)
 
 	return nil
 }
@@ -84,6 +145,10 @@ func (p *Process) startProcessByExec() error {
 	errLogFile, err := getLogfile(errLog)
 	if err != nil {
 		return err
+	}
+
+	if len(p.Args) == 0 {
+		p.Args = []string{}
 	}
 
 	cmd := exec.Cmd{
@@ -117,14 +182,6 @@ func (p *Process) waitForProcess() {
 	p.cmd.Process.Release()
 
 	glog.Infof("Process '%s' closed.", p.Name)
-}
-
-func (p *Process) IsRunning() bool {
-	if err := syscall.Kill(p.Pid, 0); err != nil {
-		return false
-	} else {
-		return true
-	}
 }
 
 func getLogfile(path string) (*os.File, error) {

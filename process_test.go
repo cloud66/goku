@@ -9,7 +9,7 @@ import (
 
 func init() {
 	flag.Set("alsologtostderr", "true")
-	
+
 	os.RemoveAll(LogFolder)
 }
 
@@ -34,5 +34,31 @@ func TestStart(t *testing.T) {
 
 	if p.IsRunning() {
 		t.Error("Process is running")
+	}
+}
+
+func TestSimpleStop(t *testing.T) {
+	p := Process{
+		Name: "test",
+		Directory: "tests",
+		Command: "stops_with_quit.sh",
+	}
+
+	err := p.Start()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !p.IsRunning() {
+		t.Error("Process not running")
+	}
+
+	err = p.Stop()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if p.IsRunning() {
+		t.Error("Process is still running")
 	}
 }
