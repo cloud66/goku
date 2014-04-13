@@ -8,12 +8,12 @@ import (
 )
 
 func init() {
+	flag.Set("alsologtostderr", "true")
+	
 	os.RemoveAll(LogFolder)
 }
 
 func TestStart(t *testing.T) {
-	flag.Set("alsologtostderr", "true")
-
 	p := Process{
 		Name: "test",
 		Directory: "/bin",
