@@ -96,8 +96,9 @@ func (p *Process) Stop() error {
 	// still running? use force
 	if p.IsRunning() {
 		glog.Infof("Process '%s' still running trying force", p.Name)
-		//p.x.Kill()
-		//p.x.Release()
+		syscall.Kill(p.Pid, syscall.SIGKILL)
+		time.Sleep(100 * time.Millisecond)
+		p.x.Release()
 	}
 
 	// still running?
@@ -123,7 +124,6 @@ func (p *Process) sendSignalAndWait(instruction Instruction) error {
 		return err
 	}
 
-	// wait
 	time.Sleep(instruction.Wait * time.Second)
 
 	return nil

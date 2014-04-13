@@ -70,7 +70,7 @@ func TestTermToStop(t *testing.T) {
 		Directory: "tests",
 		Command: "stops_with_term.sh",
 		StopSequence: []Instruction{
-			{ Signal: syscall.SIGQUIT, Wait: 2 },
+			{ Signal: syscall.SIGQUIT, Wait: 1 },
 			{ Signal: syscall.SIGTERM, Wait: 1 },
 		},
 	}
@@ -84,7 +84,33 @@ func TestTermToStop(t *testing.T) {
 		t.Error("Process not running")
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(100 * time.Millisecond)
+
+	err = p.Stop()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if p.IsRunning() {
+		t.Error("Process is still running")
+	}
+}
+
+func TestForceToStop(t *testing.T) {
+	p := Process{
+		Name: "TestForceToStop",
+		Directory: "tests",
+		Command: "stops_with_none.sh",
+	}
+
+	err := p.Start()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !p.IsRunning() {
+		t.Error("Process not running")
+	}
 
 	err = p.Stop()
 	if err != nil {
