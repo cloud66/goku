@@ -148,35 +148,27 @@ func (p *Process) Stop() error {
 	return nil
 }
 
-// send the drain signal and waits
-func (p *Process) Drain() error {
-	p.StatusCode = PS_DRAINING
-
-	err := p.x.Signal(p.DrainSignal.Signal)
-	if err != nil {
-		p.StatusCode = PS_UNKNOWN
-
-		return err
-	}
-
-	p.StatusCode = PS_DRAINED
-
-	return nil
-}
-
-func (p *Process) DrainAndStop() error {
-	err := p.Drain()
+// sends a drain signal to the process.
+// it can stop the process in due course (DrainSignal.Wait) if needed
+// wait for stop happens in the background
+func (p *Process) Drain(stop bool) error {
+	err := p.drain()
 	if err != nil {
 		p.StatusCode = PS_UNKNOWN
 		return err
 	}
 
-	time.Sleep(p.DrainSignal.Wait * time.Second)
+	if stop {
+		// wait in the background to kill it
+		go func(proc *Process) {
+			time.Sleep(proc.DrainSignal.Wait * time.Second)
 
-	err = p.Stop()
-	if err != nil {
-		p.StatusCode = PS_UNKNOWN
-		return err
+			err := proc.Stop()
+			if err != nil {
+				proc.StatusCode = PS_UNKNOWN
+				glog.Errorf("Failed to stop the drained process '%s'", proc.Name)
+			}
+		}(p)
 	}
 
 	return nil
@@ -189,6 +181,22 @@ func (p *Process) IsRunning() bool {
 		p.StatusCode = PS_UNMONITORED
 		return true
 	}
+}
+
+// send the drain signal
+func (p *Process) drain() error {
+	p.StatusCode = PS_DRAINING
+
+	err := p.x.Signal(p.DrainSignal.Signal)
+	if err != nil {
+		p.StatusCode = PS_UNKNOWN
+
+		return err
+	}
+
+	p.StatusCode = PS_DRAINED
+
+	return nil
 }
 
 func (p *Process) sendSignalAndWait(instruction Instruction) error {
