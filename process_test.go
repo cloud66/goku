@@ -1,25 +1,26 @@
 package main
 
 import (
-	"testing"
-	"os"
-	"time"
 	"flag"
+	"os"
 	"syscall"
+	"testing"
+	"time"
 )
 
 func init() {
 	flag.Set("alsologtostderr", "true")
 
 	os.RemoveAll(LogFolder)
+	os.RemoveAll(PidFolder)
 }
 
 func TestStart(t *testing.T) {
 	p := Process{
-		Name: "TestStart",
+		Name:      "TestStart",
 		Directory: "/bin",
-		Command: "sleep",
-		Args: []string{ "1" },
+		Command:   "sleep",
+		Args:      []string{"1"},
 	}
 
 	err := p.Start()
@@ -40,9 +41,9 @@ func TestStart(t *testing.T) {
 
 func TestSimpleStop(t *testing.T) {
 	p := Process{
-		Name: "TestSimpleStop",
+		Name:      "TestSimpleStop",
 		Directory: "tests",
-		Command: "stops_with_quit.sh",
+		Command:   "stops_with_quit.sh",
 	}
 
 	err := p.Start()
@@ -66,12 +67,12 @@ func TestSimpleStop(t *testing.T) {
 
 func TestTermToStop(t *testing.T) {
 	p := Process{
-		Name: "TestTermToStop",
+		Name:      "TestTermToStop",
 		Directory: "tests",
-		Command: "stops_with_term.sh",
+		Command:   "stops_with_term.sh",
 		StopSequence: []Instruction{
-			{ Signal: syscall.SIGQUIT, Wait: 1 },
-			{ Signal: syscall.SIGTERM, Wait: 1 },
+			{Signal: syscall.SIGQUIT, Wait: 1},
+			{Signal: syscall.SIGTERM, Wait: 1},
 		},
 	}
 
@@ -98,9 +99,9 @@ func TestTermToStop(t *testing.T) {
 
 func TestForceToStop(t *testing.T) {
 	p := Process{
-		Name: "TestForceToStop",
+		Name:      "TestForceToStop",
 		Directory: "tests",
-		Command: "stops_with_none.sh",
+		Command:   "stops_with_none.sh",
 	}
 
 	err := p.Start()
@@ -124,9 +125,9 @@ func TestForceToStop(t *testing.T) {
 
 func TestStatus(t *testing.T) {
 	p := Process{
-		Name: "TestStatus",
+		Name:      "TestStatus",
 		Directory: "tests",
-		Command: "stops_with_term.sh",
+		Command:   "stops_with_term.sh",
 	}
 
 	if p.StatusCode != PS_UNMONITORED {

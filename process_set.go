@@ -1,24 +1,24 @@
 package main
 
 import (
-	"sync"
 	"errors"
+	"sync"
 )
 
 type ProcessSet struct {
-	Active				*Process
-	Draining			[]*Process
-	Name					string
-	CallbackId		string
-	Tags					[]string
-	Command		 	string
-	Args					[]string
-	Directory		 string
-	StopSequence	[]Instruction
-	DrainSignal   Instruction
-	UseEnv				bool
-	Envs					[]string
-	AllowDrain		bool
+	Active       *Process
+	Draining     []*Process
+	Name         string
+	CallbackId   string
+	Tags         []string
+	Command      string
+	Args         []string
+	Directory    string
+	StopSequence []Instruction
+	DrainSignal  Instruction
+	UseEnv       bool
+	Envs         []string
+	AllowDrain   bool
 
 	sync.Mutex
 }
@@ -143,16 +143,16 @@ func (p *ProcessSet) allProcesses() []*Process {
 
 func (p *ProcessSet) buildProcess() *Process {
 	return &Process{
-		Name: 				p.Name,
-		CallbackId: 	p.CallbackId,
-		Tags: 				p.Tags,
-		Command: 		 p.Command,
-		Args: 				p.Args,
-		Directory: 	 p.Directory,
+		Name:         p.Name,
+		CallbackId:   p.CallbackId,
+		Tags:         p.Tags,
+		Command:      p.Command,
+		Args:         p.Args,
+		Directory:    p.Directory,
 		StopSequence: p.StopSequence,
 		DrainSignal:  p.DrainSignal,
-		UseEnv: 			p.UseEnv,
-		Envs: 				p.Envs,
-		AllowDrain: 	p.AllowDrain,
+		UseEnv:       p.UseEnv,
+		Envs:         p.Envs,
+		AllowDrain:   p.AllowDrain,
 	}
 }

@@ -1,13 +1,13 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"os/exec"
-	"time"
+	"path/filepath"
 	"strconv"
 	"syscall"
-	"errors"
-	"path/filepath"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/nu7hatch/gouuid"
@@ -17,55 +17,56 @@ const (
 	LogFolder = "/tmp/goku/logs"
 	PidFolder = "/tmp/goku/pids"
 
-	PS_UNMONITORED  = 0
-	PS_UNKNOWN			= PS_UNMONITORED + 1
-	PS_STARTING 		= PS_UNKNOWN + 1
-	PS_UP					 = PS_STARTING + 1
-	PS_STOPPING	   = PS_UP + 1
-	PS_DRAINING	   = PS_STOPPING + 1
-	PS_DRAINED			= PS_DRAINING + 1
+	PS_UNMONITORED = 0
+	PS_UNKNOWN     = PS_UNMONITORED + 1
+	PS_STARTING    = PS_UNKNOWN + 1
+	PS_UP          = PS_STARTING + 1
+	PS_STOPPING    = PS_UP + 1
+	PS_DRAINING    = PS_STOPPING + 1
+	PS_DRAINED     = PS_DRAINING + 1
 )
 
-var statusMap = map[int]string {
+var statusMap = map[int]string{
 	PS_UNMONITORED: "unmonitored",
-	PS_STARTING:		"starting",
-	PS_UP:					"up",
-	PS_STOPPING:		"stopping",
-	PS_DRAINING:		"draining",
+	PS_STARTING:    "starting",
+	PS_UP:          "up",
+	PS_STOPPING:    "stopping",
+	PS_DRAINING:    "draining",
 }
 
 type Instruction struct {
-	Signal		os.Signal
-	Wait			time.Duration
+	Signal os.Signal
+	Wait   time.Duration
 }
 
 var defaultStopSequence = []Instruction{
-	{ Signal: syscall.SIGQUIT, Wait: 5 },
-	{ Signal: syscall.SIGKILL, Wait: 0 },
+	{Signal: syscall.SIGQUIT, Wait: 5},
+	{Signal: syscall.SIGKILL, Wait: 0},
 }
 
 type Process struct {
-	Name					string
-	Uid			 		string
-	CallbackId		string
-	Tags					[]string
-	Command		 	string
-	Args					[]string
-	Directory		 string
+	Name       string
+	Uid        string
+	CallbackId string
+	Tags       []string
+	Command    string
+	Args       []string
+	Directory  string
 	// signals to send and wait expecting the process to die
-	StopSequence	[]Instruction
+	StopSequence []Instruction
 	// signal to start the drain.
 	// we then wait until we start the stop sequence
-	DrainSignal   Instruction
-	UseEnv				bool
-	Envs					[]string
-	AllowDrain		bool
-	Pid					 int
-	StatusCode		int
+	DrainSignal Instruction
+	UseEnv      bool
+	Envs        []string
+	AllowDrain  bool
+	Pid         int
+	StatusCode  int
 
-	x						 *os.Process
-	timestamp		 int64
-	cmd					 *exec.Cmd
+	x         *os.Process
+	timestamp int64
+	cmd       *exec.Cmd
+	pidfile   Pidfile
 }
 
 func (p *Process) Status() string {
@@ -77,6 +78,7 @@ func (p *Process) Start() error {
 
 	// make sure the needed folders are there
 	os.MkdirAll(LogFolder, 0777)
+	os.MkdirAll(PidFolder, 0777)
 
 	// mark the start
 	p.timestamp = time.Now().Unix()
@@ -219,8 +221,8 @@ func (p *Process) startProcessByExec() error {
 		envs = p.Envs
 	}
 
-	outLog := filepath.Join(LogFolder, p.Name + "_stdout_" + strconv.FormatInt(p.timestamp, 10) + ".log")
-	errLog := filepath.Join(LogFolder, p.Name + "_stderr_" + strconv.FormatInt(p.timestamp, 10) + ".log")
+	outLog := filepath.Join(LogFolder, p.Name+"_stdout_"+strconv.FormatInt(p.timestamp, 10)+".log")
+	errLog := filepath.Join(LogFolder, p.Name+"_stderr_"+strconv.FormatInt(p.timestamp, 10)+".log")
 	outLogFile, err := getLogfile(outLog)
 	if err != nil {
 		return err
@@ -229,19 +231,20 @@ func (p *Process) startProcessByExec() error {
 	if err != nil {
 		return err
 	}
+	p.pidfile = Pidfile(filepath.Join(PidFolder, p.Name+"_"+strconv.FormatInt(p.timestamp, 10)+".pid"))
 
 	if len(p.Args) == 0 {
 		p.Args = []string{}
 	}
 
 	cmd := exec.Cmd{
-		Path: p.Command,
-		Args: append([]string{p.Command}, p.Args...),
-		Dir: p.Directory,
-		Stdin: os.Stdin,
+		Path:   p.Command,
+		Args:   append([]string{p.Command}, p.Args...),
+		Dir:    p.Directory,
+		Stdin:  os.Stdin,
 		Stdout: outLogFile,
 		Stderr: errLogFile,
-		Env: envs,
+		Env:    envs,
 	}
 	err = cmd.Start()
 	if err != nil {
@@ -249,6 +252,7 @@ func (p *Process) startProcessByExec() error {
 	}
 
 	p.Pid = cmd.Process.Pid
+	p.pidfile.write(p.Pid)
 	p.x = cmd.Process
 	p.cmd = &cmd
 
@@ -263,6 +267,8 @@ func (p *Process) waitForProcess() {
 	p.cmd.Process.Wait()
 	p.cmd.Process.Kill()
 	p.cmd.Process.Release()
+
+	p.pidfile.delete()
 
 	p.StatusCode = PS_UNMONITORED
 
