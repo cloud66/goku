@@ -16,7 +16,23 @@ import (
 const (
 	LogFolder = "/tmp/goku/logs"
 	PidFolder = "/tmp/goku/pids"
+
+	PS_UNMONITORED  = 0
+	PS_UNKNOWN			= PS_UNMONITORED + 1
+	PS_STARTING 		= PS_UNKNOWN + 1
+	PS_UP					 = PS_STARTING + 1
+	PS_STOPPING	   = PS_UP + 1
+	PS_DRAINING	   = PS_STOPPING + 1
+	PS_DRAINED			= PS_DRAINING + 1
 )
+
+var statusMap = map[int]string {
+	PS_UNMONITORED: "unmonitored",
+	PS_STARTING:		"starting",
+	PS_UP:					"up",
+	PS_STOPPING:		"stopping",
+	PS_DRAINING:		"draining",
+}
 
 type Instruction struct {
 	Signal		os.Signal
@@ -45,13 +61,20 @@ type Process struct {
 	Envs					[]string
 	AllowDrain		bool
 	Pid					 int
+	StatusCode		int
 
 	x						 *os.Process
 	timestamp		 int64
 	cmd					 *exec.Cmd
 }
 
+func (p *Process) Status() string {
+	return statusMap[p.StatusCode]
+}
+
 func (p *Process) Start() error {
+	p.StatusCode = PS_STARTING
+
 	// make sure the needed folders are there
 	os.MkdirAll(LogFolder, 0777)
 
@@ -59,6 +82,7 @@ func (p *Process) Start() error {
 	p.timestamp = time.Now().Unix()
 	uid, err := uuid.NewV4()
 	if err != nil {
+		p.StatusCode = PS_UNKNOWN
 		return err
 	}
 
@@ -73,8 +97,11 @@ func (p *Process) Start() error {
 	// now start it
 	err = p.startProcessByExec()
 	if err != nil {
+		p.StatusCode = PS_UNKNOWN
 		return err
 	}
+
+	p.StatusCode = PS_UP
 
 	go p.waitForProcess()
 
@@ -82,15 +109,20 @@ func (p *Process) Start() error {
 }
 
 func (p *Process) Stop() error {
+	p.StatusCode = PS_STOPPING
+
 	for _, item := range p.StopSequence {
 		glog.Infof("Sending %s to %d", item.Signal, p.Pid)
 		err := p.sendSignalAndWait(item)
 		if err != nil {
+			p.StatusCode = PS_UNKNOWN
 			return err
 		}
 
 		// is it running?
 		if !p.IsRunning() {
+			p.StatusCode = PS_UNMONITORED
+
 			glog.Infof("Process '%s' stopped", p.Name)
 			return nil
 		}
@@ -106,18 +138,28 @@ func (p *Process) Stop() error {
 
 	// still running?
 	if p.IsRunning() {
+		p.StatusCode = PS_UNKNOWN
+
 		return errors.New("cannot stop the process")
 	}
+
+	p.StatusCode = PS_UNMONITORED
 
 	return nil
 }
 
 // send the drain signal and waits
 func (p *Process) Drain() error {
+	p.StatusCode = PS_DRAINING
+
 	err := p.x.Signal(p.DrainSignal.Signal)
 	if err != nil {
+		p.StatusCode = PS_UNKNOWN
+
 		return err
 	}
+
+	p.StatusCode = PS_DRAINED
 
 	return nil
 }
@@ -125,10 +167,17 @@ func (p *Process) Drain() error {
 func (p *Process) DrainAndStop() error {
 	err := p.Drain()
 	if err != nil {
+		p.StatusCode = PS_UNKNOWN
 		return err
 	}
 
 	time.Sleep(p.DrainSignal.Wait * time.Second)
+
+	err = p.Stop()
+	if err != nil {
+		p.StatusCode = PS_UNKNOWN
+		return err
+	}
 
 	return nil
 }
@@ -137,6 +186,7 @@ func (p *Process) IsRunning() bool {
 	if err := syscall.Kill(p.Pid, 0); err != nil {
 		return false
 	} else {
+		p.StatusCode = PS_UNMONITORED
 		return true
 	}
 }
@@ -205,6 +255,8 @@ func (p *Process) waitForProcess() {
 	p.cmd.Process.Wait()
 	p.cmd.Process.Kill()
 	p.cmd.Process.Release()
+
+	p.StatusCode = PS_UNMONITORED
 
 	glog.Infof("Process '%s' closed.", p.Name)
 }
