@@ -119,6 +119,15 @@ func (p *Process) Drain() error {
 		return err
 	}
 
+	return nil
+}
+
+func (p *Process) DrainAndStop() error {
+	err := p.Drain()
+	if err != nil {
+		return err
+	}
+
 	time.Sleep(p.DrainSignal.Wait * time.Second)
 
 	return nil
