@@ -121,3 +121,38 @@ func TestForceToStop(t *testing.T) {
 		t.Error("Process is still running")
 	}
 }
+
+func TestStatus(t *testing.T) {
+	p := Process{
+		Name: "TestStatus",
+		Directory: "tests",
+		Command: "stops_with_term.sh",
+	}
+
+	if p.StatusCode != PS_UNMONITORED {
+		t.Errorf("Status is not unmonitored (%s)", p.Status())
+	}
+
+	err := p.Start()
+	if err != nil {
+		t.Error("Failed to start")
+	}
+
+	if p.StatusCode != PS_UP {
+		t.Errorf("Status is not up (%s)", p.Status())
+	}
+
+	go p.Stop()
+
+	time.Sleep(100 * time.Millisecond)
+
+	if p.StatusCode != PS_STOPPING {
+		t.Errorf("Status is not stopping (%s)", p.Status())
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	if p.StatusCode != PS_UNMONITORED {
+		t.Errorf("Status is not unmonitored (%s)", p.Status())
+	}
+}
