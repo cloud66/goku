@@ -4,9 +4,11 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"syscall"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
@@ -39,10 +41,15 @@ type Instruction struct {
 	Wait   time.Duration
 }
 
-var defaultStopSequence = []Instruction{
+var (
+	defaultStopSequence = []Instruction{
 	{Signal: syscall.SIGQUIT, Wait: 5},
 	{Signal: syscall.SIGKILL, Wait: 0},
 }
+	startLock sync.Mutex
+)
+
+
 
 type Process struct {
 	Name       string
@@ -62,11 +69,15 @@ type Process struct {
 	AllowDrain  bool
 	Pid         int
 	StatusCode  int
+	User  			string
+	Group  		 string
 
 	x         *os.Process
 	timestamp int64
 	cmd       *exec.Cmd
 	pidfile   Pidfile
+	userId		int
+	groupId	 int
 }
 
 func (p *Process) Status() string {
@@ -221,6 +232,27 @@ func (p *Process) startProcessByExec() error {
 		envs = p.Envs
 	}
 
+	// find the user/group
+	if p.User != "" {
+		uuid, err := user.Lookup(p.User)
+		if err != nil {
+			return err
+		}
+		uid, err := strconv.Atoi(uuid.Uid)
+		if err != nil {
+			return err
+		}
+		p.userId = uid
+	}
+
+	if p.Group != "" {
+		gid, err := LookupGroupId(p.Group)
+		if err != nil {
+			return err
+		}
+		p.groupId = gid
+	}
+
 	outLog := filepath.Join(LogFolder, p.Name+"_stdout_"+strconv.FormatInt(p.timestamp, 10)+".log")
 	errLog := filepath.Join(LogFolder, p.Name+"_stderr_"+strconv.FormatInt(p.timestamp, 10)+".log")
 	outLogFile, err := getLogfile(outLog)
@@ -246,6 +278,28 @@ func (p *Process) startProcessByExec() error {
 		Stderr: errLogFile,
 		Env:    envs,
 	}
+
+	startLock.Lock()
+	defer startLock.Unlock()
+	// switch the user
+	cuid := syscall.Getuid()
+	cgid := syscall.Getgid()
+	defer func() {
+		syscall.Setuid(cuid)
+		syscall.Setgid(cgid)
+	}()
+
+	if p.userId != 0 {
+		if err = syscall.Setuid(p.userId); err != nil {
+			return err
+		}
+	}
+	if p.groupId != 0 {
+		if err = syscall.Setgid(p.groupId); err != nil {
+			return err
+		}
+	}
+
 	err = cmd.Start()
 	if err != nil {
 		return err
