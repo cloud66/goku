@@ -7,8 +7,8 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
-	"syscall"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/golang/glog"
@@ -43,13 +43,11 @@ type Instruction struct {
 
 var (
 	defaultStopSequence = []Instruction{
-	{Signal: syscall.SIGQUIT, Wait: 5},
-	{Signal: syscall.SIGKILL, Wait: 0},
-}
+		{Signal: syscall.SIGQUIT, Wait: 5},
+		{Signal: syscall.SIGKILL, Wait: 0},
+	}
 	startLock sync.Mutex
 )
-
-
 
 type Process struct {
 	Name       string
@@ -69,15 +67,15 @@ type Process struct {
 	AllowDrain  bool
 	Pid         int
 	StatusCode  int
-	User  			string
-	Group  		 string
+	User        string
+	Group       string
 
 	x         *os.Process
 	timestamp int64
 	cmd       *exec.Cmd
 	pidfile   Pidfile
-	userId		int
-	groupId	 int
+	userId    int
+	groupId   int
 }
 
 func (p *Process) Status() string {

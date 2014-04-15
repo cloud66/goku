@@ -19,8 +19,8 @@ type ProcessSet struct {
 	UseEnv       bool
 	Envs         []string
 	AllowDrain   bool
-	User  			 string
-	Group  		  string
+	User         string
+	Group        string
 
 	sync.Mutex
 }
@@ -156,7 +156,7 @@ func (p *ProcessSet) buildProcess() *Process {
 		UseEnv:       p.UseEnv,
 		Envs:         p.Envs,
 		AllowDrain:   p.AllowDrain,
-		User:  			 p.User,
-		Group:  		  p.Group,
+		User:         p.User,
+		Group:        p.Group,
 	}
 }

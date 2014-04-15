@@ -1,0 +1,19 @@
+Name         = "Full"
+CallbackId   = "some-callback"
+Tags         = ["web", "db"]
+Command      = "sleep"
+Args         = ["1"]
+Directory    = "/bin"
+UseEnv       = true
+AllowDrain   = false
+User  			 = "user"
+Group  		  = "group"
+[[StopSequence]]
+Signal = "kill"
+Wait   = "5s"
+[[StopSequence]]
+Signal = "usr1"
+Wait   = "10s"
+[DrainSignal]
+Signal = "usr2"
+Wait	 = "1m"

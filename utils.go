@@ -2,9 +2,9 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"os"
-	"errors"
 	"strconv"
 	"strings"
 )

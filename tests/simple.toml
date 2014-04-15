@@ -1,0 +1,11 @@
+Name         = "Simple"
+CallbackId   = "some-callback"
+Tags         = ["web", "db"]
+Command      = "sleep"
+Args         = ["1"]
+Directory    = "/bin"
+UseEnv       = true
+AllowDrain   = false
+User  			 = "user"
+Group  		  = "group"
+Envs				 = ["abc=123", "xyz=987"]
