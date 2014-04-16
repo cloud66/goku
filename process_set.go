@@ -21,31 +21,41 @@ type ProcessSet struct {
 	AllowDrain   bool
 	User         string
 	Group        string
+	UseStdPipe	 bool
 
 	sync.Mutex
 }
 
 func LoadFromConfig(config *Config) *ProcessSet {
 	var p = ProcessSet{
-		Name: config.Name,
-		CallbackId: config.CallbackId,
-		Tags: config.Tags,
-		Command: config.Command,
-		Args: config.Args,
-		Directory: config.Directory,
-		DrainSignal: config.DrainSignal.ToInstruction(),
-		UseEnv: config.UseEnv,
-		Envs: config.Envs,
-		AllowDrain: config.AllowDrain,
-		User: config.User,
-		Group: config.Group,
+		Name:        config.Name,
+		CallbackId:  config.CallbackId,
+		Tags:        config.Tags,
+		Command:     config.Command,
+		Directory:   config.Directory,
+		UseEnv:      config.UseEnv,
+		Envs:        config.Envs,
+		AllowDrain:  config.AllowDrain,
+		User:        config.User,
+		Group:       config.Group,
+		UseStdPipe:  config.UseStdPipe,
 	}
 
-	var stopSequences []Instruction
-	for _, stopSequence := range config.StopSequence {
-		stopSequences = append(stopSequences, stopSequence.ToInstruction())
+	if config.DrainSignal != nil {
+		p.DrainSignal = config.DrainSignal.ToInstruction()
 	}
-	p.StopSequence = stopSequences
+
+	if len(config.Args) != 0 {
+		p.Args = config.Args
+	}
+
+	if len(config.StopSequence) != 0 {
+		var stopSequences []Instruction
+		for _, stopSequence := range config.StopSequence {
+			stopSequences = append(stopSequences, stopSequence.ToInstruction())
+		}
+		p.StopSequence = stopSequences
+	}
 
 	return &p
 }
@@ -55,7 +65,7 @@ func (p *ProcessSet) Start() error {
 	p.Lock()
 	defer p.Unlock()
 
-	if !p.hasActive() {
+	if p.hasActive() {
 		return errors.New("Process is already started")
 	}
 
@@ -183,5 +193,6 @@ func (p *ProcessSet) buildProcess() *Process {
 		AllowDrain:   p.AllowDrain,
 		User:         p.User,
 		Group:        p.Group,
+		UseStdPipe:	p.UseStdPipe,
 	}
 }

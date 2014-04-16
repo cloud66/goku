@@ -2,8 +2,8 @@ package main
 
 import (
 	"reflect"
-	"testing"
 	"syscall"
+	"testing"
 )
 
 func TestSimpleConfig(t *testing.T) {

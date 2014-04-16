@@ -69,6 +69,7 @@ type Process struct {
 	StatusCode  int
 	User        string
 	Group       string
+	UseStdPipe  bool
 
 	x         *os.Process
 	timestamp int64
@@ -101,7 +102,7 @@ func (p *Process) Start() error {
 	glog.Infof("Starting process '%s' Timestamp: %d Uid:%s", p.Name, p.timestamp, p.Uid)
 
 	if len(p.StopSequence) == 0 {
-		glog.Info("Using the default StopSeuqnce")
+		glog.Info("Will use the default StopSeuqnce for stop")
 		p.StopSequence = defaultStopSequence
 	}
 
@@ -230,6 +231,13 @@ func (p *Process) startProcessByExec() error {
 		envs = p.Envs
 	}
 
+	// find the executable
+	fullPath, err := exec.LookPath(p.Command)
+	if err != nil {
+		fullPath = p.Command
+	}
+	glog.V(Detail).Infof("Found '%s' here '%s'", p.Command, fullPath)
+
 	// find the user/group
 	if p.User != "" {
 		uuid, err := user.Lookup(p.User)
@@ -268,24 +276,32 @@ func (p *Process) startProcessByExec() error {
 	}
 
 	cmd := exec.Cmd{
-		Path:   p.Command,
+		Path:   fullPath,
 		Args:   append([]string{p.Command}, p.Args...),
 		Dir:    p.Directory,
-		Stdin:  os.Stdin,
-		Stdout: outLogFile,
-		Stderr: errLogFile,
 		Env:    envs,
+		Stdin:  os.Stdin,
 	}
 
-	startLock.Lock()
-	defer startLock.Unlock()
-	// switch the user
-	cuid := syscall.Getuid()
-	cgid := syscall.Getgid()
-	defer func() {
-		syscall.Setuid(cuid)
-		syscall.Setgid(cgid)
-	}()
+	if !p.UseStdPipe {
+		cmd.Stdout = outLogFile
+		cmd.Stderr = errLogFile
+	} else {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
+
+	if p.userId != 0 || p.groupId != 0 {
+		startLock.Lock()
+		defer startLock.Unlock()
+		// switch the user
+		cuid := syscall.Getuid()
+		cgid := syscall.Getgid()
+		defer func() {
+			syscall.Setuid(cuid)
+			syscall.Setgid(cgid)
+		}()
+	}
 
 	if p.userId != 0 {
 		if err = syscall.Setuid(p.userId); err != nil {
@@ -298,10 +314,13 @@ func (p *Process) startProcessByExec() error {
 		}
 	}
 
+	glog.V(Verbose).Infof("Calling exec command for %s", cmd)
+	glog.V(Detail).Infof("Calling exec for command '%s' in '%s' with %s", cmd.Path, cmd.Dir, cmd.Args)
 	err = cmd.Start()
 	if err != nil {
 		return err
 	}
+	glog.V(Detail).Infof("Process '%s' started", cmd.Path)
 
 	p.Pid = cmd.Process.Pid
 	p.pidfile.write(p.Pid)

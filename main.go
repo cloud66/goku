@@ -3,9 +3,14 @@ package main
 import (
 	"flag"
 	"os"
-//	"fmt"
 
 	"github.com/golang/glog"
+)
+
+const (
+	Verbose = 5
+	Detail	= 4
+	Debug	 = 3
 )
 
 var flagConfName string
@@ -20,6 +25,10 @@ func main() {
 		flag.PrintDefaults()
 	}
 
+	if _, err := os.Stat(flagConfName); os.IsNotExist(err) {
+    glog.Fatalf("Configuration file not found: %s", flagConfName)
+	}
+
 	conf, err := ReadConfiguration(flagConfName)
 	if err != nil {
 		glog.Error(err)
@@ -27,5 +36,8 @@ func main() {
 	glog.Infof("Starting Goku with configuration %s", flagConfName)
 
 	var p = LoadFromConfig(conf)
-	glog.Infof("%v", p)
+	err = p.Start()
+	if err != nil {
+		glog.Error(err)
+	}
 }

@@ -62,13 +62,14 @@ type Config struct {
 	Command      string
 	Args         []string
 	Directory    string
-	StopSequence []inst
-	DrainSignal  inst
+	StopSequence []*inst
+	DrainSignal  *inst
 	UseEnv       bool
 	Envs         []string
 	AllowDrain   bool
 	User         string
 	Group        string
+	UseStdPipe	 bool
 }
 
 func ReadConfiguration(file string) (*Config, error) {
@@ -100,10 +101,10 @@ func (d *signal) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func (i *inst) ToInstruction() (Instruction) {
+func (i *inst) ToInstruction() Instruction {
 	var ins = Instruction{
 		Signal: i.Signal.Signal,
-		Wait: i.Wait.Duration,
+		Wait:   i.Wait.Duration,
 	}
 
 	return ins
