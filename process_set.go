@@ -25,6 +25,31 @@ type ProcessSet struct {
 	sync.Mutex
 }
 
+func LoadFromConfig(config *Config) *ProcessSet {
+	var p = ProcessSet{
+		Name: config.Name,
+		CallbackId: config.CallbackId,
+		Tags: config.Tags,
+		Command: config.Command,
+		Args: config.Args,
+		Directory: config.Directory,
+		DrainSignal: config.DrainSignal.ToInstruction(),
+		UseEnv: config.UseEnv,
+		Envs: config.Envs,
+		AllowDrain: config.AllowDrain,
+		User: config.User,
+		Group: config.Group,
+	}
+
+	var stopSequences []Instruction
+	for _, stopSequence := range config.StopSequence {
+		stopSequences = append(stopSequences, stopSequence.ToInstruction())
+	}
+	p.StopSequence = stopSequences
+
+	return &p
+}
+
 // Starts a process in the set if possible.
 func (p *ProcessSet) Start() error {
 	p.Lock()

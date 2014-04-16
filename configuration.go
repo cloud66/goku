@@ -99,3 +99,12 @@ func (d *signal) UnmarshalText(text []byte) error {
 	d.Signal = value
 	return nil
 }
+
+func (i *inst) ToInstruction() (Instruction) {
+	var ins = Instruction{
+		Signal: i.Signal.Signal,
+		Wait: i.Wait.Duration,
+	}
+
+	return ins
+}

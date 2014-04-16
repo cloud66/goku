@@ -1,3 +1,4 @@
+# simple process configuration
 Name         = "Simple"
 CallbackId   = "some-callback"
 Tags         = ["web", "db"]

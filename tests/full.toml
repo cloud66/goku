@@ -1,3 +1,4 @@
+# a full process configuration
 Name         = "Full"
 CallbackId   = "some-callback"
 Tags         = ["web", "db"]
