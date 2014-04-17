@@ -69,7 +69,7 @@ type Config struct {
 	AllowDrain   bool
 	User         string
 	Group        string
-	UseStdPipe	 bool
+	UseStdPipe   bool
 }
 
 func ReadConfiguration(file string) (*Config, error) {

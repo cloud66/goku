@@ -10,8 +10,8 @@ import (
 
 const (
 	Verbose = 5
-	Detail	= 4
-	Debug	 = 3
+	Detail  = 4
+	Debug   = 3
 )
 
 var flagConfName string
@@ -32,7 +32,7 @@ func main() {
 	}
 
 	if _, err := os.Stat(flagConfName); os.IsNotExist(err) {
-    glog.Errorf("Configuration file not found: %s", flagConfName)
+		glog.Errorf("Configuration file not found: %s", flagConfName)
 	}
 
 	conf, err := ReadConfiguration(flagConfName)
@@ -47,7 +47,7 @@ func main() {
 		glog.Error(err)
 	}
 
-	registerServer([]*ProcessSet {p})
+	registerServer([]*ProcessSet{p})
 
 	glog.Info("Started. Control is now listening to tcp:1234")
 

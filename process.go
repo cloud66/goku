@@ -276,11 +276,11 @@ func (p *Process) startProcessByExec() error {
 	}
 
 	cmd := exec.Cmd{
-		Path:   fullPath,
-		Args:   append([]string{p.Command}, p.Args...),
-		Dir:    p.Directory,
-		Env:    envs,
-		Stdin:  os.Stdin,
+		Path:  fullPath,
+		Args:  append([]string{p.Command}, p.Args...),
+		Dir:   p.Directory,
+		Env:   envs,
+		Stdin: os.Stdin,
 	}
 
 	if !p.UseStdPipe {

@@ -23,24 +23,24 @@ type ProcessSet struct {
 	AllowDrain   bool
 	User         string
 	Group        string
-	UseStdPipe	 bool
+	UseStdPipe   bool
 
 	sync.Mutex
 }
 
 func LoadFromConfig(config *Config) *ProcessSet {
 	var p = ProcessSet{
-		Name:        config.Name,
-		CallbackId:  config.CallbackId,
-		Tags:        config.Tags,
-		Command:     config.Command,
-		Directory:   config.Directory,
-		UseEnv:      config.UseEnv,
-		Envs:        config.Envs,
-		AllowDrain:  config.AllowDrain,
-		User:        config.User,
-		Group:       config.Group,
-		UseStdPipe:  config.UseStdPipe,
+		Name:       config.Name,
+		CallbackId: config.CallbackId,
+		Tags:       config.Tags,
+		Command:    config.Command,
+		Directory:  config.Directory,
+		UseEnv:     config.UseEnv,
+		Envs:       config.Envs,
+		AllowDrain: config.AllowDrain,
+		User:       config.User,
+		Group:      config.Group,
+		UseStdPipe: config.UseStdPipe,
 	}
 
 	if config.DrainSignal != nil {
@@ -195,12 +195,23 @@ func (p *ProcessSet) buildProcess() *Process {
 		AllowDrain:   p.AllowDrain,
 		User:         p.User,
 		Group:        p.Group,
-		UseStdPipe:	p.UseStdPipe,
+		UseStdPipe:   p.UseStdPipe,
 	}
 }
 
-func (c *ProcessSet) ToCtrlProcessSet() (*models.CtrlProcessSet) {
-	return &models.CtrlProcessSet{
-		Name: c.Name,
+func (c *ProcessSet) ToCtrlProcessSet() models.CtrlProcessSet {
+	return models.CtrlProcessSet{
+		Name:       c.Name,
+		CallbackId: c.CallbackId,
+		Tags:       c.Tags,
+		Command:    c.Command,
+		Args:       c.Args,
+		Directory:  c.Directory,
+		UseEnv:     c.UseEnv,
+		Envs:       c.Envs,
+		AllowDrain: c.AllowDrain,
+		User:       c.User,
+		Group:      c.Group,
+		UseStdPipe: c.UseStdPipe,
 	}
 }
