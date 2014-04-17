@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"os"
+	"time"
 
 	"github.com/golang/glog"
 )
@@ -25,8 +26,13 @@ func main() {
 		flag.PrintDefaults()
 	}
 
+	if flagConfName == "" {
+		glog.Error("No configuration file specified. Use the -c option")
+		return
+	}
+
 	if _, err := os.Stat(flagConfName); os.IsNotExist(err) {
-    glog.Fatalf("Configuration file not found: %s", flagConfName)
+    glog.Errorf("Configuration file not found: %s", flagConfName)
 	}
 
 	conf, err := ReadConfiguration(flagConfName)
@@ -39,5 +45,14 @@ func main() {
 	err = p.Start()
 	if err != nil {
 		glog.Error(err)
+	}
+
+	registerServer([]*ProcessSet {p})
+
+	glog.Info("Started. Control is now listening to tcp:1234")
+
+	// sleep
+	for {
+		time.Sleep(1 * time.Second)
 	}
 }

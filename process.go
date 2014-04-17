@@ -107,15 +107,15 @@ func (p *Process) Start() error {
 	}
 
 	// now start it
-	err = p.startProcessByExec()
-	if err != nil {
-		p.StatusCode = PS_UNKNOWN
-		return err
-	}
-
-	p.StatusCode = PS_UP
-
-	go p.waitForProcess()
+	go func() {
+		err := p.startProcessByExec()
+		if err != nil {
+			p.StatusCode = PS_UNKNOWN
+			//return err
+		}
+		p.StatusCode = PS_UP
+		go p.waitForProcess()
+	}()
 
 	return nil
 }

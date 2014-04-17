@@ -2,7 +2,7 @@
 Name         = "Pagekite"
 Tags         = ["web", "dev" ]
 Command      = "pagekite.py"
-Args				 = ["3000", "boom.bang.pagekite.me"]
+Args				 = ["3000", "khash.cloud66.pagekite.me"]
 UseEnv       = true
 AllowDrain   = false
 UseStdPipe   = true

@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"sync"
+
+	"github.com/cloud66/goku/models"
 )
 
 type ProcessSet struct {
@@ -194,5 +196,11 @@ func (p *ProcessSet) buildProcess() *Process {
 		User:         p.User,
 		Group:        p.Group,
 		UseStdPipe:	p.UseStdPipe,
+	}
+}
+
+func (c *ProcessSet) ToCtrlProcessSet() (*models.CtrlProcessSet) {
+	return &models.CtrlProcessSet{
+		Name: c.Name,
 	}
 }
