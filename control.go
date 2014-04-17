@@ -3,6 +3,7 @@ package main
 import (
 	"net"
 	"net/rpc"
+	"errors"
 	"net/rpc/jsonrpc"
 
 	"github.com/cloud66/goku/models"
@@ -13,9 +14,17 @@ type Control struct {
 	processSets []*ProcessSet
 }
 
-func (c *Control) First(_ *int, reply *models.CtrlProcessSet) error {
-	r := c.processSets[0].ToCtrlProcessSet()
-	*reply = r
+func (c *Control) Stop(ctrlProcessSet *models.CtrlProcessSet, reply *int) error {
+	proc, err := c.findProcessSet(ctrlProcessSet)
+	if err != nil {
+		return err
+	}
+
+	err = proc.Stop()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -52,4 +61,14 @@ func registerServer(processSets []*ProcessSet) error {
 	}
 
 	return nil
+}
+
+func (c *Control) findProcessSet(ctrlProcessSet *models.CtrlProcessSet) (*ProcessSet, error) {
+	for _, processSet := range c.processSets {
+		if processSet.Name == ctrlProcessSet.Name {
+			return processSet, nil
+		}
+	}
+
+	return nil, errors.New("process not found")
 }

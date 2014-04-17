@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func LookupGroupId(group string) (gid int, err error) {
+func lookupGroupId(group string) (gid int, err error) {
 	f, err := os.Open("/etc/group")
 	if err != nil {
 		return

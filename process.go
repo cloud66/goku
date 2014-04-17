@@ -66,25 +66,27 @@ type Process struct {
 	Envs        []string
 	AllowDrain  bool
 	Pid         int
-	StatusCode  int
 	User        string
 	Group       string
 	UseStdPipe  bool
 
-	x         *os.Process
-	timestamp int64
-	cmd       *exec.Cmd
-	pidfile   Pidfile
-	userId    int
-	groupId   int
+	LastActionAt time.Time
+
+	x           *os.Process
+	timestamp   int64
+	cmd         *exec.Cmd
+	pidfile     Pidfile
+	userId      int
+	groupId     int
+	statusCode  int
 }
 
 func (p *Process) Status() string {
-	return statusMap[p.StatusCode]
+	return statusMap[p.statusCode]
 }
 
 func (p *Process) Start() error {
-	p.StatusCode = PS_STARTING
+	p.statusCode = PS_STARTING
 
 	// make sure the needed folders are there
 	os.MkdirAll(LogFolder, 0777)
@@ -94,7 +96,7 @@ func (p *Process) Start() error {
 	p.timestamp = time.Now().Unix()
 	uid, err := uuid.NewV4()
 	if err != nil {
-		p.StatusCode = PS_UNKNOWN
+		p.statusCode = PS_UNKNOWN
 		return err
 	}
 
@@ -110,10 +112,10 @@ func (p *Process) Start() error {
 	go func() {
 		err := p.startProcessByExec()
 		if err != nil {
-			p.StatusCode = PS_UNKNOWN
+			p.statusCode = PS_UNKNOWN
 			//return err
 		}
-		p.StatusCode = PS_UP
+		p.statusCode = PS_UP
 		go p.waitForProcess()
 	}()
 
@@ -121,19 +123,19 @@ func (p *Process) Start() error {
 }
 
 func (p *Process) Stop() error {
-	p.StatusCode = PS_STOPPING
+	p.statusCode = PS_STOPPING
 
 	for _, item := range p.StopSequence {
 		glog.Infof("Sending %s to %d", item.Signal, p.Pid)
 		err := p.sendSignalAndWait(item)
 		if err != nil {
-			p.StatusCode = PS_UNKNOWN
+			p.statusCode = PS_UNKNOWN
 			return err
 		}
 
 		// is it running?
 		if !p.IsRunning() {
-			p.StatusCode = PS_UNMONITORED
+			p.statusCode = PS_UNMONITORED
 
 			glog.Infof("Process '%s' stopped", p.Name)
 			return nil
@@ -150,12 +152,12 @@ func (p *Process) Stop() error {
 
 	// still running?
 	if p.IsRunning() {
-		p.StatusCode = PS_UNKNOWN
+		p.statusCode = PS_UNKNOWN
 
 		return errors.New("cannot stop the process")
 	}
 
-	p.StatusCode = PS_UNMONITORED
+	p.statusCode = PS_UNMONITORED
 
 	return nil
 }
@@ -166,7 +168,7 @@ func (p *Process) Stop() error {
 func (p *Process) Drain(stop bool) error {
 	err := p.drain()
 	if err != nil {
-		p.StatusCode = PS_UNKNOWN
+		p.statusCode = PS_UNKNOWN
 		return err
 	}
 
@@ -177,7 +179,7 @@ func (p *Process) Drain(stop bool) error {
 
 			err := proc.Stop()
 			if err != nil {
-				proc.StatusCode = PS_UNKNOWN
+				proc.statusCode = PS_UNKNOWN
 				glog.Errorf("Failed to stop the drained process '%s'", proc.Name)
 			}
 		}(p)
@@ -190,23 +192,23 @@ func (p *Process) IsRunning() bool {
 	if err := syscall.Kill(p.Pid, 0); err != nil {
 		return false
 	} else {
-		p.StatusCode = PS_UNMONITORED
+		p.statusCode = PS_UNMONITORED
 		return true
 	}
 }
 
 // send the drain signal
 func (p *Process) drain() error {
-	p.StatusCode = PS_DRAINING
+	p.statusCode = PS_DRAINING
 
 	err := p.x.Signal(p.DrainSignal.Signal)
 	if err != nil {
-		p.StatusCode = PS_UNKNOWN
+		p.statusCode = PS_UNKNOWN
 
 		return err
 	}
 
-	p.StatusCode = PS_DRAINED
+	p.statusCode = PS_DRAINED
 
 	return nil
 }
@@ -252,7 +254,7 @@ func (p *Process) startProcessByExec() error {
 	}
 
 	if p.Group != "" {
-		gid, err := LookupGroupId(p.Group)
+		gid, err := lookupGroupId(p.Group)
 		if err != nil {
 			return err
 		}
@@ -341,7 +343,7 @@ func (p *Process) waitForProcess() {
 
 	p.pidfile.delete()
 
-	p.StatusCode = PS_UNMONITORED
+	p.statusCode = PS_UNMONITORED
 
 	glog.Infof("Process '%s' closed.", p.Name)
 }
