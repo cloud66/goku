@@ -26,11 +26,11 @@ const (
 	PS_UP          = PS_STARTING + 1
 	PS_STOPPING    = PS_UP + 1
 	PS_DRAINING    = PS_STOPPING + 1
-	PS_DRAINED     = PS_DRAINING + 1
 )
 
 var statusMap = map[int]string{
 	PS_UNMONITORED: "unmonitored",
+	PS_UNKNOWN:		 "unknown",
 	PS_STARTING:    "starting",
 	PS_UP:          "up",
 	PS_STOPPING:    "stopping",
@@ -87,6 +87,7 @@ func (p *Process) status() (int, string) {
 }
 
 func (p *Process) setStatus(newStatus int) {
+	glog.V(Detail).Infof("Process %s (%s) status is chaning %s -> %s", p.Name, p.Uid, statusMap[p.statusCode], statusMap[newStatus])
 	p.statusCode = newStatus
 	p.LastActionAt = time.Now()
 }
@@ -110,7 +111,7 @@ func (p *Process) start() error {
 	glog.Infof("Starting process '%s' Timestamp: %d Uid:%s", p.Name, p.timestamp, p.Uid)
 
 	if len(p.StopSequence) == 0 {
-		glog.Info("Will use the default StopSeuqnce for stop")
+		glog.Info("Will use the default StopSequence for stop")
 		p.StopSequence = defaultStopSequence
 	}
 
@@ -143,14 +144,14 @@ func (p *Process) stop() error {
 		if !p.isRunning() {
 			p.setStatus(PS_UNMONITORED)
 
-			glog.Infof("Process '%s' stopped", p.Name)
+			glog.Infof("Process '%s' (%s) stopped", p.Name, p.Uid)
 			return nil
 		}
 	}
 
 	// still running? use force
 	if p.isRunning() {
-		glog.Infof("Process '%s' still running trying force", p.Name)
+		glog.Infof("Process '%s' (%s) still running trying force", p.Name, p.Uid)
 		syscall.Kill(p.Pid, syscall.SIGKILL)
 		time.Sleep(100 * time.Millisecond)
 		p.x.Release()
@@ -170,7 +171,7 @@ func (p *Process) stop() error {
 
 // sends a drain signal to the process.
 // it can stop the process in due course (DrainSignal.Wait) if needed
-// wait for stop happens in the background
+// it waits for the drain and then stops the process by calling stop
 func (p *Process) drain(stop bool) error {
 	err := p.sendDrainSignal()
 	if err != nil {
@@ -179,16 +180,13 @@ func (p *Process) drain(stop bool) error {
 	}
 
 	if stop {
-		// wait in the background to kill it
-		go func(proc *Process) {
-			time.Sleep(proc.DrainSignal.Wait * time.Second)
+		time.Sleep(p.DrainSignal.Wait)
 
-			err := proc.stop()
-			if err != nil {
-				proc.setStatus(PS_UNKNOWN)
-				glog.Errorf("Failed to stop the drained process '%s'", proc.Name)
-			}
-		}(p)
+		err := p.stop()
+		if err != nil {
+			p.setStatus(PS_UNKNOWN)
+			return err
+		}
 	}
 
 	return nil
@@ -207,26 +205,36 @@ func (p *Process) isRunning() bool {
 func (p *Process) sendDrainSignal() error {
 	p.setStatus(PS_DRAINING)
 
-	err := p.x.Signal(p.DrainSignal.Signal)
+	err := p.sendSignal(p.DrainSignal.Signal)
 	if err != nil {
 		p.setStatus(PS_UNKNOWN)
 
 		return err
 	}
 
-	p.setStatus(PS_DRAINED)
-
 	return nil
 }
 
 func (p *Process) sendSignalAndWait(instruction Instruction) error {
 	// send
-	err := p.x.Signal(instruction.Signal)
+	err := p.sendSignal(instruction.Signal)
 	if err != nil {
 		return err
 	}
 
+	// wait
 	time.Sleep(instruction.Wait * time.Second)
+
+	return nil
+}
+
+func (p *Process) sendSignal(signal os.Signal) error {
+	glog.V(Detail).Infof("Sending %s to %s (%s)", signal, p.Name, p.Uid)
+
+	err := p.x.Signal(signal)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -328,20 +336,20 @@ func (p *Process) startProcessByExec() error {
 	if err != nil {
 		return err
 	}
-	glog.V(Detail).Infof("Process '%s' started", cmd.Path)
+	glog.V(Detail).Infof("Process '%s' (%s) started", cmd.Path, p.Uid)
 
 	p.Pid = cmd.Process.Pid
 	p.pidfile.write(p.Pid)
 	p.x = cmd.Process
 	p.cmd = &cmd
 
-	glog.Infof("Process '%s' started. Pid: %d", p.Name, p.Pid)
+	glog.Infof("Process '%s' (%s) started. Pid: %d", p.Name, p.Uid, p.Pid)
 
 	return nil
 }
 
 func (p *Process) waitForProcess() {
-	glog.Infof("Watching close of process '%s'", p.Name)
+	glog.Infof("Watching close of process '%s' (%s)", p.Name, p.Uid)
 
 	p.cmd.Process.Wait()
 	p.cmd.Process.Kill()
@@ -351,7 +359,7 @@ func (p *Process) waitForProcess() {
 
 	p.setStatus(PS_UNMONITORED)
 
-	glog.Infof("Process '%s' closed.", p.Name)
+	glog.Infof("Process '%s' (%s) closed.", p.Name, p.Uid)
 }
 
 func getLogfile(path string) (*os.File, error) {

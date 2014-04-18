@@ -83,6 +83,7 @@ var commands = []*Command{
 	cmdList,
 	cmdStop,
 	cmdStart,
+	cmdRecycle,
 
 	/*	helpCommands,
 		helpEnviron,

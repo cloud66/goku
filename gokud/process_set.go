@@ -3,8 +3,10 @@ package main
 import (
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/cloud66/goku/models"
+	"github.com/golang/glog"
 )
 
 const (
@@ -73,21 +75,34 @@ func (p *ProcessSet) start() error {
 	p.Lock()
 	defer p.Unlock()
 
+	return p.doStart()
+}
+
+// Starts a process in the set if possible.
+// not thread safe. Always call start instead
+func (p *ProcessSet) doStart() error {
 	if p.hasActive() {
+		glog.Errorf("Process %s is already started", p.Name)
 		return errors.New("Process is already started")
 	}
+
+	glog.Infof("Starting %s", p.Name)
 
 	// Start a new process and use as active
 	proc := p.buildProcess()
 	err := proc.start()
 	if err != nil {
+		glog.Errorf("Starting %s failed due to %v", p.Name, err)
 		return err
 	}
 
 	p.Active = proc
 
+	glog.Infof("Process %s started", p.Name)
+
 	return nil
 }
+
 
 // Stops the active process in the set
 func (p *ProcessSet) stop() error {
@@ -95,15 +110,21 @@ func (p *ProcessSet) stop() error {
 	defer p.Unlock()
 
 	if !p.hasActive() {
+		glog.Errorf("Process %s is not started", p.Name)
 		return errors.New("No process is started")
 	}
 
+	glog.Infof("Stopping %s", p.Name)
+
 	err := p.Active.stop()
 	if err != nil {
+		glog.Errorf("Failed to stop process %s due to %v", p.Name, err)
 		return err
 	}
 
 	p.Active = nil
+
+	glog.Infof("Process %s stopped", p.Name)
 
 	return nil
 }
@@ -115,6 +136,8 @@ func (p *ProcessSet) stopAll() []error {
 
 	var res = []error{}
 
+	glog.Infof("Stopping all processes under %s", p.Name)
+
 	var wg sync.WaitGroup
 	for _, item := range p.allProcesses() {
 		wg.Add(1)
@@ -122,34 +145,16 @@ func (p *ProcessSet) stopAll() []error {
 			defer wg.Done()
 			err := proc.stop()
 			if err != nil {
+				glog.Errorf("Failed to stop process %s (%s) due to %v", proc.Name, proc.Uid, err)
 				res = append(res, err)
 			}
 		}(item)
 	}
-
 	wg.Wait()
 
+	glog.Infof("All processes under %s stopped", p.Name)
+
 	return res
-}
-
-// drains the active process and stops it in due course
-func (p *ProcessSet) drain() error {
-	p.Lock()
-	defer p.Unlock()
-
-	if !p.hasActive() {
-		return errors.New("No process is started")
-	}
-
-	err := p.Active.drain(true)
-	if err != nil {
-		return err
-	}
-
-	p.Draining = append(p.Draining, p.Active)
-	p.Active = nil
-
-	return nil
 }
 
 // drain and start a new one
@@ -158,20 +163,33 @@ func (p *ProcessSet) recycle() error {
 	defer p.Unlock()
 
 	if !p.hasActive() {
+		glog.Errorf("Process %s is not started", p.Name)
 		return errors.New("No process is started")
 	}
 
-	err := p.drain()
+	glog.Infof("Recycling process %s", p.Name)
+
+	// this part is async since we need to have the new one start immediately
+	go func(proc *ProcessSet, active *Process) {
+		glog.Infof("Waiting for %s (%s) to drain", proc.Name, active.Uid)
+		err := active.drain(true)
+		if err != nil {
+			glog.Errorf("Failed to drain %s (%s) due to %v", proc.Name, active.Uid, err)
+		}
+	}(p, p.Active)
+
+	p.Draining = append(p.Draining, p.Active)
+	p.Active = nil
+
+	// wait for drain signals
+	time.Sleep(1 * time.Second)
+
+	err := p.doStart()
 	if err != nil {
 		return err
 	}
 
-	// TODO: Drain grace period
-
-	err = p.start()
-	if err != nil {
-		return err
-	}
+	glog.Infof("Process %s recycled. New active UID is %s", p.Name, p.Active.Uid)
 
 	return nil
 }

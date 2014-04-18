@@ -30,6 +30,20 @@ func (c *Control) Stop(ctrlProcessSet *models.CtrlProcessSet, reply *int) error 
 	return nil
 }
 
+func (c *Control) Recycle(ctrlProcessSet *models.CtrlProcessSet, reply *int) error {
+	procSet, err := c.findProcessSet(ctrlProcessSet)
+	if err != nil {
+		return err
+	}
+
+	err = procSet.recycle()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *Control) Start(ctrlProcessSet *models.CtrlProcessSet, reply *int) error {
 	procSet, err := c.findProcessSet(ctrlProcessSet)
 	if err != nil {
