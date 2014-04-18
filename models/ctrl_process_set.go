@@ -1,5 +1,9 @@
 package models
 
+import (
+	"fmt"
+)
+
 type StatusTuple struct {
 	Code			int
 	Message	 string
@@ -18,7 +22,27 @@ type CtrlProcessSet struct {
 	User         string
 	Group        string
 	UseStdPipe   bool
-	Status			 StatusTuple
 	Draining	   []CtrlProcess
-	Active			 CtrlProcess
+	Active			 *CtrlProcess
+}
+
+func (c *CtrlProcessSet) Status() string {
+	return fmt.Sprintf("%s %s", c.ActiveStatus(), c.DrainingStatus())
+}
+
+// returns the status of the child processes
+func (c *CtrlProcessSet) DrainingStatus() string {
+	if len(c.Draining) == 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("(%d draining)", len(c.Draining))
+}
+
+func (c *CtrlProcessSet) ActiveStatus() string {
+	if c.Active == nil {
+		return "unmonitored"
+	}
+
+	return c.Active.Status.Message
 }

@@ -4,7 +4,6 @@ import (
 	"io"
 	"os"
 	"sort"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/cloud66/goku/models"
@@ -43,7 +42,9 @@ func printProcessList(w io.Writer, servers *[]models.CtrlProcessSet) {
 
 func listProcess(w io.Writer, a models.CtrlProcessSet) {
 	listRec(w,
-		strings.ToLower(a.Name),
+		a.Name,
+		a.Tags,
+		a.Status(),
 	)
 }
 

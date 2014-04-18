@@ -68,16 +68,6 @@ func loadProcessSetFromConfig(config *Config) *ProcessSet {
 	return &p
 }
 
-// returns the status of the process set
-func (p *ProcessSet) status() (int, string) {
-	// no active process?
-	if !p.hasActive() {
-		return PSET_UNMONITORED, "unmonitored"
-	}
-
-	return p.Active.status()
-}
-
 // Starts a process in the set if possible.
 func (p *ProcessSet) start() error {
 	p.Lock()
@@ -231,13 +221,13 @@ func (c *ProcessSet) toCtrlProcessSet() models.CtrlProcessSet {
 		UseStdPipe: c.UseStdPipe,
 	}
 
-	ctrlProcessSet.Status.Code, ctrlProcessSet.Status.Message = c.status()
 	for _, process := range c.Draining {
 		ctrlProcessSet.Draining = append(ctrlProcessSet.Draining, process.toCtrlProcess())
 	}
 
 	if c.hasActive() {
-		ctrlProcessSet.Active = c.Active.toCtrlProcess()
+		ctrlProcSet := c.Active.toCtrlProcess()
+		ctrlProcessSet.Active = &ctrlProcSet
 	}
 
 	return ctrlProcessSet
