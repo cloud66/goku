@@ -17,6 +17,7 @@ const (
 )
 
 var flagConfName string
+var flagAutoStart bool
 var loadWait sync.WaitGroup
 var processes []*ProcessSet
 
@@ -24,6 +25,7 @@ func main() {
 	args := os.Args[1:]
 
 	flag.StringVar(&flagConfName, "d", "", "configuration file directory (toml format)")
+	flag.BoolVar(&flagAutoStart, "s", false, "start the loaded configurations automatically")
 	flag.Parse()
 
 	if len(args) > 0 && args[0] == "help" {
@@ -74,9 +76,11 @@ func loadConfiguration(configFile string) {
 	processes = append(processes, p)
 	loadWait.Done()
 
-	err = p.start()
-	if err != nil {
-		glog.Error(err)
+	if flagAutoStart {
+		err = p.start()
+		if err != nil {
+			glog.Error(err)
+		}
 	}
 }
 

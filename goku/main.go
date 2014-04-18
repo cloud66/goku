@@ -82,6 +82,7 @@ func (c *Command) ShortExtra() string {
 var commands = []*Command{
 	cmdList,
 	cmdStop,
+	cmdStart,
 
 	/*	helpCommands,
 		helpEnviron,

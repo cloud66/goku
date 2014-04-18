@@ -30,6 +30,20 @@ func (c *Control) Stop(ctrlProcessSet *models.CtrlProcessSet, reply *int) error 
 	return nil
 }
 
+func (c *Control) Start(ctrlProcessSet *models.CtrlProcessSet, reply *int) error {
+	procSet, err := c.findProcessSet(ctrlProcessSet)
+	if err != nil {
+		return err
+	}
+
+	err = procSet.start()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *Control) List(_ *int, reply *[]models.CtrlProcessSet) error {
 	// map real process sets to control process sets
 	var ctrlProcesses []models.CtrlProcessSet
