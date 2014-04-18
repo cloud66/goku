@@ -1,5 +1,10 @@
 package models
 
+type StatusTuple struct {
+	Code			int
+	Message	 string
+}
+
 type CtrlProcessSet struct {
 	Name         string
 	CallbackId   string
@@ -13,4 +18,7 @@ type CtrlProcessSet struct {
 	User         string
 	Group        string
 	UseStdPipe   bool
+	Status			 StatusTuple
+	Draining	   []CtrlProcess
+	Active			 CtrlProcess
 }

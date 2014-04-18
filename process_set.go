@@ -7,6 +7,13 @@ import (
 	"github.com/cloud66/goku/models"
 )
 
+const (
+	PSET_UNMONITORED = 0
+	PSET_STARTING    = 1
+	PSET_UP          = 2
+	PSET_STOPPING    = 3
+)
+
 type ProcessSet struct {
 	Active       *Process
 	Draining     []*Process
@@ -28,20 +35,18 @@ type ProcessSet struct {
 	sync.Mutex
 }
 
-func LoadFromConfig(config *Config) *ProcessSet {
-	var p = ProcessSet{
-		Name:       config.Name,
-		CallbackId: config.CallbackId,
-		Tags:       config.Tags,
-		Command:    config.Command,
-		Directory:  config.Directory,
-		UseEnv:     config.UseEnv,
-		Envs:       config.Envs,
-		AllowDrain: config.AllowDrain,
-		User:       config.User,
-		Group:      config.Group,
-		UseStdPipe: config.UseStdPipe,
-	}
+func (p *ProcessSet) loadFromConfig(config *Config) error {
+	p.Name = config.Name
+	p.CallbackId = config.CallbackId
+	p.Tags = config.Tags
+	p.Command = config.Command
+	p.Directory = config.Directory
+	p.UseEnv = config.UseEnv
+	p.Envs = config.Envs
+	p.AllowDrain = config.AllowDrain
+	p.User = config.User
+	p.Group = config.Group
+	p.UseStdPipe = config.UseStdPipe
 
 	if config.DrainSignal != nil {
 		p.DrainSignal = config.DrainSignal.ToInstruction()
@@ -59,11 +64,21 @@ func LoadFromConfig(config *Config) *ProcessSet {
 		p.StopSequence = stopSequences
 	}
 
-	return &p
+	return nil
+}
+
+// returns the status of the process set
+func (p *ProcessSet) status() (int, string) {
+	// no active process?
+	if !p.hasActive() {
+		return PSET_UNMONITORED, "unmonitored"
+	}
+
+	return p.Active.status()
 }
 
 // Starts a process in the set if possible.
-func (p *ProcessSet) Start() error {
+func (p *ProcessSet) start() error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -73,7 +88,7 @@ func (p *ProcessSet) Start() error {
 
 	// Start a new process and use as active
 	proc := p.buildProcess()
-	err := proc.Start()
+	err := proc.start()
 	if err != nil {
 		return err
 	}
@@ -84,7 +99,7 @@ func (p *ProcessSet) Start() error {
 }
 
 // Stops the active process in the set
-func (p *ProcessSet) Stop() error {
+func (p *ProcessSet) stop() error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -92,7 +107,7 @@ func (p *ProcessSet) Stop() error {
 		return errors.New("No process is started")
 	}
 
-	err := p.Active.Stop()
+	err := p.Active.stop()
 	if err != nil {
 		return err
 	}
@@ -103,7 +118,7 @@ func (p *ProcessSet) Stop() error {
 }
 
 // stops all processes in the set
-func (p *ProcessSet) StopAll() []error {
+func (p *ProcessSet) stopAll() []error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -114,7 +129,7 @@ func (p *ProcessSet) StopAll() []error {
 		wg.Add(1)
 		go func(proc *Process) {
 			defer wg.Done()
-			err := proc.Stop()
+			err := proc.stop()
 			if err != nil {
 				res = append(res, err)
 			}
@@ -127,7 +142,7 @@ func (p *ProcessSet) StopAll() []error {
 }
 
 // drains the active process and stops it in due course
-func (p *ProcessSet) Drain() error {
+func (p *ProcessSet) drain() error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -135,7 +150,7 @@ func (p *ProcessSet) Drain() error {
 		return errors.New("No process is started")
 	}
 
-	err := p.Active.Drain(true)
+	err := p.Active.drain(true)
 	if err != nil {
 		return err
 	}
@@ -147,7 +162,7 @@ func (p *ProcessSet) Drain() error {
 }
 
 // drain and start a new one
-func (p *ProcessSet) Recycle() error {
+func (p *ProcessSet) recycle() error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -155,14 +170,14 @@ func (p *ProcessSet) Recycle() error {
 		return errors.New("No process is started")
 	}
 
-	err := p.Drain()
+	err := p.drain()
 	if err != nil {
 		return err
 	}
 
 	// TODO: Drain grace period
 
-	err = p.Start()
+	err = p.start()
 	if err != nil {
 		return err
 	}
@@ -199,8 +214,8 @@ func (p *ProcessSet) buildProcess() *Process {
 	}
 }
 
-func (c *ProcessSet) ToCtrlProcessSet() models.CtrlProcessSet {
-	return models.CtrlProcessSet{
+func (c *ProcessSet) toCtrlProcessSet() models.CtrlProcessSet {
+	ctrlProcessSet := models.CtrlProcessSet{
 		Name:       c.Name,
 		CallbackId: c.CallbackId,
 		Tags:       c.Tags,
@@ -214,4 +229,15 @@ func (c *ProcessSet) ToCtrlProcessSet() models.CtrlProcessSet {
 		Group:      c.Group,
 		UseStdPipe: c.UseStdPipe,
 	}
+
+	ctrlProcessSet.Status.Code, ctrlProcessSet.Status.Message = c.status()
+	for _, process := range c.Draining {
+		ctrlProcessSet.Draining = append(ctrlProcessSet.Draining, process.toCtrlProcess())
+	}
+
+	if c.hasActive() {
+		ctrlProcessSet.Active = c.Active.toCtrlProcess()
+	}
+
+	return ctrlProcessSet
 }

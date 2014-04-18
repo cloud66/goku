@@ -1,9 +1,9 @@
 package main
 
 import (
+	"errors"
 	"net"
 	"net/rpc"
-	"errors"
 	"net/rpc/jsonrpc"
 
 	"github.com/cloud66/goku/models"
@@ -15,12 +15,12 @@ type Control struct {
 }
 
 func (c *Control) Stop(ctrlProcessSet *models.CtrlProcessSet, reply *int) error {
-	proc, err := c.findProcessSet(ctrlProcessSet)
+	procSet, err := c.findProcessSet(ctrlProcessSet)
 	if err != nil {
 		return err
 	}
 
-	err = proc.Stop()
+	err = procSet.stop()
 	if err != nil {
 		return err
 	}
@@ -32,7 +32,7 @@ func (c *Control) List(_ *int, reply *[]models.CtrlProcessSet) error {
 	// map real process sets to control process sets
 	var ctrlProcesses []models.CtrlProcessSet
 	for _, processSet := range c.processSets {
-		ctrlProcesses = append(ctrlProcesses, processSet.ToCtrlProcessSet())
+		ctrlProcesses = append(ctrlProcesses, processSet.toCtrlProcessSet())
 	}
 
 	*reply = ctrlProcesses

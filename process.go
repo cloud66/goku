@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cloud66/goku/models"
 	"github.com/golang/glog"
 	"github.com/nu7hatch/gouuid"
 )
@@ -72,21 +73,26 @@ type Process struct {
 
 	LastActionAt time.Time
 
-	x           *os.Process
-	timestamp   int64
-	cmd         *exec.Cmd
-	pidfile     Pidfile
-	userId      int
-	groupId     int
-	statusCode  int
+	x          *os.Process
+	timestamp  int64
+	cmd        *exec.Cmd
+	pidfile    Pidfile
+	userId     int
+	groupId    int
+	statusCode int
 }
 
-func (p *Process) Status() string {
-	return statusMap[p.statusCode]
+func (p *Process) status() (int, string) {
+	return p.statusCode, statusMap[p.statusCode]
 }
 
-func (p *Process) Start() error {
-	p.statusCode = PS_STARTING
+func (p *Process) setStatus(newStatus int) {
+	p.statusCode = newStatus
+	p.LastActionAt = time.Now()
+}
+
+func (p *Process) start() error {
+	p.setStatus(PS_STARTING)
 
 	// make sure the needed folders are there
 	os.MkdirAll(LogFolder, 0777)
@@ -96,7 +102,7 @@ func (p *Process) Start() error {
 	p.timestamp = time.Now().Unix()
 	uid, err := uuid.NewV4()
 	if err != nil {
-		p.statusCode = PS_UNKNOWN
+		p.setStatus(PS_UNKNOWN)
 		return err
 	}
 
@@ -112,30 +118,30 @@ func (p *Process) Start() error {
 	go func() {
 		err := p.startProcessByExec()
 		if err != nil {
-			p.statusCode = PS_UNKNOWN
+			p.setStatus(PS_UNKNOWN)
 			//return err
 		}
-		p.statusCode = PS_UP
+		p.setStatus(PS_UP)
 		go p.waitForProcess()
 	}()
 
 	return nil
 }
 
-func (p *Process) Stop() error {
-	p.statusCode = PS_STOPPING
+func (p *Process) stop() error {
+	p.setStatus(PS_STOPPING)
 
 	for _, item := range p.StopSequence {
 		glog.Infof("Sending %s to %d", item.Signal, p.Pid)
 		err := p.sendSignalAndWait(item)
 		if err != nil {
-			p.statusCode = PS_UNKNOWN
+			p.setStatus(PS_UNKNOWN)
 			return err
 		}
 
 		// is it running?
-		if !p.IsRunning() {
-			p.statusCode = PS_UNMONITORED
+		if !p.isRunning() {
+			p.setStatus(PS_UNMONITORED)
 
 			glog.Infof("Process '%s' stopped", p.Name)
 			return nil
@@ -143,7 +149,7 @@ func (p *Process) Stop() error {
 	}
 
 	// still running? use force
-	if p.IsRunning() {
+	if p.isRunning() {
 		glog.Infof("Process '%s' still running trying force", p.Name)
 		syscall.Kill(p.Pid, syscall.SIGKILL)
 		time.Sleep(100 * time.Millisecond)
@@ -151,13 +157,13 @@ func (p *Process) Stop() error {
 	}
 
 	// still running?
-	if p.IsRunning() {
-		p.statusCode = PS_UNKNOWN
+	if p.isRunning() {
+		p.setStatus(PS_UNKNOWN)
 
 		return errors.New("cannot stop the process")
 	}
 
-	p.statusCode = PS_UNMONITORED
+	p.setStatus(PS_UNMONITORED)
 
 	return nil
 }
@@ -165,10 +171,10 @@ func (p *Process) Stop() error {
 // sends a drain signal to the process.
 // it can stop the process in due course (DrainSignal.Wait) if needed
 // wait for stop happens in the background
-func (p *Process) Drain(stop bool) error {
-	err := p.drain()
+func (p *Process) drain(stop bool) error {
+	err := p.sendDrainSignal()
 	if err != nil {
-		p.statusCode = PS_UNKNOWN
+		p.setStatus(PS_UNKNOWN)
 		return err
 	}
 
@@ -177,9 +183,9 @@ func (p *Process) Drain(stop bool) error {
 		go func(proc *Process) {
 			time.Sleep(proc.DrainSignal.Wait * time.Second)
 
-			err := proc.Stop()
+			err := proc.stop()
 			if err != nil {
-				proc.statusCode = PS_UNKNOWN
+				proc.setStatus(PS_UNKNOWN)
 				glog.Errorf("Failed to stop the drained process '%s'", proc.Name)
 			}
 		}(p)
@@ -188,27 +194,27 @@ func (p *Process) Drain(stop bool) error {
 	return nil
 }
 
-func (p *Process) IsRunning() bool {
+func (p *Process) isRunning() bool {
 	if err := syscall.Kill(p.Pid, 0); err != nil {
 		return false
 	} else {
-		p.statusCode = PS_UNMONITORED
+		p.setStatus(PS_UNMONITORED)
 		return true
 	}
 }
 
 // send the drain signal
-func (p *Process) drain() error {
-	p.statusCode = PS_DRAINING
+func (p *Process) sendDrainSignal() error {
+	p.setStatus(PS_DRAINING)
 
 	err := p.x.Signal(p.DrainSignal.Signal)
 	if err != nil {
-		p.statusCode = PS_UNKNOWN
+		p.setStatus(PS_UNKNOWN)
 
 		return err
 	}
 
-	p.statusCode = PS_DRAINED
+	p.setStatus(PS_DRAINED)
 
 	return nil
 }
@@ -343,7 +349,7 @@ func (p *Process) waitForProcess() {
 
 	p.pidfile.delete()
 
-	p.statusCode = PS_UNMONITORED
+	p.setStatus(PS_UNMONITORED)
 
 	glog.Infof("Process '%s' closed.", p.Name)
 }
@@ -355,4 +361,17 @@ func getLogfile(path string) (*os.File, error) {
 	}
 
 	return file, nil
+}
+
+func (p *Process) toCtrlProcess() models.CtrlProcess {
+	ctrlProcess := models.CtrlProcess{
+		Uid:          p.Uid,
+		Pid:          p.Pid,
+		LastActionAt: p.LastActionAt,
+		TimeStamp:    p.timestamp,
+	}
+
+	ctrlProcess.Status.Code, ctrlProcess.Status.Message = p.status()
+
+	return ctrlProcess
 }

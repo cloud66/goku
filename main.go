@@ -41,8 +41,9 @@ func main() {
 	}
 	glog.Infof("Starting Goku with configuration %s", flagConfName)
 
-	var p = LoadFromConfig(conf)
-	err = p.Start()
+	var p *ProcessSet
+	p.loadFromConfig(conf)
+	err = p.start()
 	if err != nil {
 		glog.Error(err)
 	}
