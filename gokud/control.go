@@ -7,7 +7,7 @@ import (
 	"net/rpc/jsonrpc"
 
 	"github.com/cloud66/goku/models"
-	//	"github.com/golang/glog"
+	"github.com/golang/glog"
 )
 
 type Control struct {
@@ -20,10 +20,12 @@ func (c *Control) Stop(ctrlProcessSet *models.CtrlProcessSet, reply *int) error 
 		return err
 	}
 
-	err = procSet.stop()
-	if err != nil {
-		return err
-	}
+	go func() {
+		err = procSet.stop()
+		if err != nil {
+			glog.Error(err)
+		}
+	}()
 
 	return nil
 }

@@ -36,7 +36,7 @@ type ProcessSet struct {
 }
 
 func loadProcessSetFromConfig(config *Config) *ProcessSet {
-	p := ProcessSet {}
+	p := ProcessSet{}
 	p.Name = config.Name
 	p.CallbackId = config.CallbackId
 	p.Tags = config.Tags

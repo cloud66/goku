@@ -201,7 +201,7 @@ func process() (*models.CtrlProcessSet, error) {
 		}
 
 		flagProcess = &(*processes)[idx]
-		fmt.Printf("Process: %s ", flagProcess.Name)
+		fmt.Printf("Process: %s\n", flagProcess.Name)
 		return flagProcess, err
 	}
 

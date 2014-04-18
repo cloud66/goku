@@ -1,0 +1,11 @@
+# a full process configuration
+Name         = "Process 2"
+CallbackId   = "sample-process-2"
+Tags         = ["tag1"]
+Command      = "sample_process.sh"
+Directory    = "tests"
+UseEnv       = true
+AllowDrain   = true
+[DrainSignal]
+Signal = "usr1"
+Wait	 = "1m"

@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"os"
+	"sync"
 	"time"
+	"path/filepath"
 
 	"github.com/golang/glog"
 )
@@ -15,11 +17,13 @@ const (
 )
 
 var flagConfName string
+var loadWait sync.WaitGroup
+var processes []*ProcessSet
 
 func main() {
 	args := os.Args[1:]
 
-	flag.StringVar(&flagConfName, "c", "", "configuration file (toml format)")
+	flag.StringVar(&flagConfName, "d", "", "configuration file directory (toml format)")
 	flag.Parse()
 
 	if len(args) > 0 && args[0] == "help" {
@@ -27,27 +31,28 @@ func main() {
 	}
 
 	if flagConfName == "" {
-		glog.Error("No configuration file specified. Use the -c option")
+		glog.Error("No configuration directory specified. Use the -d option")
 		return
 	}
 
 	if _, err := os.Stat(flagConfName); os.IsNotExist(err) {
-		glog.Errorf("Configuration file not found: %s", flagConfName)
+		glog.Errorf("Configuration directory not found: %s", flagConfName)
 	}
 
-	conf, err := ReadConfiguration(flagConfName)
-	if err != nil {
-		glog.Error(err)
-	}
-	glog.Infof("Starting Goku with configuration %s", flagConfName)
-
-	p := loadProcessSetFromConfig(conf)
-	err = p.start()
+	files, err := listConfigFiles(flagConfName)
 	if err != nil {
 		glog.Error(err)
 	}
 
-	registerServer([]*ProcessSet{p})
+	glog.Infof("Loading configurations from %s", flagConfName)
+	for _, file := range files {
+		loadWait.Add(1)
+		go loadConfiguration(file)
+	}
+	glog.Info("Waiting for all configurations to load")
+	loadWait.Wait()
+
+	registerServer(processes)
 
 	glog.Info("Started. Control is now listening to tcp:1234")
 
@@ -55,4 +60,32 @@ func main() {
 	for {
 		time.Sleep(1 * time.Second)
 	}
+}
+
+func loadConfiguration(configFile string) {
+	glog.Infof("Loading %s", configFile)
+
+	conf, err := ReadConfiguration(configFile)
+	if err != nil {
+		glog.Error(err)
+	}
+
+	p := loadProcessSetFromConfig(conf)
+	processes = append(processes, p)
+	loadWait.Done()
+
+	err = p.start()
+	if err != nil {
+		glog.Error(err)
+	}
+}
+
+func listConfigFiles(directory string) ([]string, error) {
+	files, err := filepath.Glob(filepath.Join(directory, "*.toml"))
+	glog.Info(files)
+	if err != nil {
+		return nil, err
+	}
+
+	return files, nil
 }
