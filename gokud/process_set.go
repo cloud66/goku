@@ -35,7 +35,8 @@ type ProcessSet struct {
 	sync.Mutex
 }
 
-func (p *ProcessSet) loadFromConfig(config *Config) error {
+func loadProcessSetFromConfig(config *Config) *ProcessSet {
+	p := ProcessSet {}
 	p.Name = config.Name
 	p.CallbackId = config.CallbackId
 	p.Tags = config.Tags
@@ -64,7 +65,7 @@ func (p *ProcessSet) loadFromConfig(config *Config) error {
 		p.StopSequence = stopSequences
 	}
 
-	return nil
+	return &p
 }
 
 // returns the status of the process set

@@ -22,7 +22,7 @@ _testmain.go
 *.exe
 *.test
 
-/goku
+/goku/goku
 
 /client/client
 
