@@ -55,6 +55,9 @@ func TestSimpleStop(t *testing.T) {
 		t.Error("Process not running")
 	}
 
+	// wait for it to settle
+	time.Sleep(100 * time.Millisecond)
+
 	err = p.stop()
 	if err != nil {
 		t.Error(err)
@@ -113,6 +116,9 @@ func TestForceToStop(t *testing.T) {
 		t.Error("Process not running")
 	}
 
+	// wait for it to settle
+	time.Sleep(100 * time.Millisecond)
+
 	err = p.stop()
 	if err != nil {
 		t.Error(err)
@@ -128,10 +134,14 @@ func TestStatus(t *testing.T) {
 		Name:      "TestStatus",
 		Directory: "tests",
 		Command:   "stops_with_term.sh",
+		StopSequence: []Instruction{
+			{Signal: syscall.SIGQUIT, Wait: 1},
+			{Signal: syscall.SIGTERM, Wait: 0},
+		},
 	}
 
 	if p.statusCode != PS_UNMONITORED {
-		t.Errorf("Status is not unmonitored (%s)", p.status())
+		t.Errorf("Status is not unmonitored (%s)", statusMap[p.statusCode])
 	}
 
 	err := p.start()
@@ -139,8 +149,11 @@ func TestStatus(t *testing.T) {
 		t.Error("Failed to start")
 	}
 
+	// wait for it to settle
+	time.Sleep(100 * time.Millisecond)
+
 	if p.statusCode != PS_UP {
-		t.Errorf("Status is not up (%s)", p.status())
+		t.Errorf("Status is not up (%s)", statusMap[p.statusCode])
 	}
 
 	go p.stop()
@@ -148,12 +161,12 @@ func TestStatus(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	if p.statusCode != PS_STOPPING {
-		t.Errorf("Status is not stopping (%s)", p.status())
+		t.Errorf("Status is not stopping (%s)", statusMap[p.statusCode])
 	}
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1100 * time.Millisecond)
 
 	if p.statusCode != PS_UNMONITORED {
-		t.Errorf("Status is not unmonitored (%s)", p.status())
+		t.Errorf("Status is not unmonitored (%s)", statusMap[p.statusCode])
 	}
 }
