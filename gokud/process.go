@@ -30,7 +30,7 @@ const (
 
 var statusMap = map[int]string{
 	PS_UNMONITORED: "unmonitored",
-	PS_UNKNOWN:		 "unknown",
+	PS_UNKNOWN:     "unknown",
 	PS_STARTING:    "starting",
 	PS_UP:          "up",
 	PS_STOPPING:    "stopping",

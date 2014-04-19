@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
-	"path/filepath"
 
 	"github.com/golang/glog"
 )

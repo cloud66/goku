@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"reflect"
 	"sync"
 	"time"
 
@@ -35,6 +36,7 @@ type ProcessSet struct {
 	UseStdPipe   bool
 
 	sync.Mutex
+	config *Config
 }
 
 func loadProcessSetFromConfig(config *Config) *ProcessSet {
@@ -50,6 +52,7 @@ func loadProcessSetFromConfig(config *Config) *ProcessSet {
 	p.User = config.User
 	p.Group = config.Group
 	p.UseStdPipe = config.UseStdPipe
+	p.config = config
 
 	if config.DrainSignal != nil {
 		p.DrainSignal = config.DrainSignal.ToInstruction()
@@ -68,6 +71,60 @@ func loadProcessSetFromConfig(config *Config) *ProcessSet {
 	}
 
 	return &p
+}
+
+func (p *ProcessSet) reload() error {
+	glog.Infof("Reloading configuration for %s", p.Name)
+
+	err := p.config.reload()
+	if err != nil {
+		return err
+	}
+
+	config := p.config
+
+	p.CallbackId = config.CallbackId
+	p.Tags = config.Tags
+	p.AllowDrain = config.AllowDrain
+	p.UseStdPipe = config.UseStdPipe
+
+	if config.DrainSignal != nil {
+		p.DrainSignal = config.DrainSignal.ToInstruction()
+	}
+
+	if len(config.Args) != 0 {
+		p.Args = config.Args
+	}
+
+	if len(config.StopSequence) != 0 {
+		var stopSequences []Instruction
+		for _, stopSequence := range config.StopSequence {
+			stopSequences = append(stopSequences, stopSequence.ToInstruction())
+		}
+		p.StopSequence = stopSequences
+	}
+
+	// any of these changes means a restart
+	if (p.Command != config.Command) ||
+		(p.Name != config.Name) ||
+		(p.Directory != config.Directory) ||
+		(p.UseEnv != config.UseEnv) ||
+		(!reflect.DeepEqual(p.Envs, config.Envs)) ||
+		(p.User != config.User) ||
+		(p.Group != config.Group) {
+		glog.Infof("Restarting configuration change detected. Restarting %s", p.Name)
+		p.Command = config.Command
+		p.Directory = config.Directory
+		p.UseEnv = config.UseEnv
+		p.Envs = config.Envs
+		p.User = config.User
+		p.Group = config.Group
+		p.Name = config.Name
+
+		return p.restart()
+	}
+
+	return nil
 }
 
 // Starts a process in the set if possible.
@@ -103,7 +160,6 @@ func (p *ProcessSet) doStart() error {
 	return nil
 }
 
-
 // Stops the active process in the set
 func (p *ProcessSet) stop() error {
 	p.Lock()
@@ -129,11 +185,20 @@ func (p *ProcessSet) stop() error {
 	return nil
 }
 
+// kills the old set and starts a new one
+func (p *ProcessSet) restart() error {
+	glog.Infof("Stopping the process set %s", p.Name)
+	errs := p.stopAll()
+	if len(errs) != 0 {
+		glog.Errorf("Failed to stop all members of the set %s due to %v", p.Name, errs)
+		return errors.New("Failed to stop all members of the set")
+	}
+
+	return p.start()
+}
+
 // stops all processes in the set
 func (p *ProcessSet) stopAll() []error {
-	p.Lock()
-	defer p.Unlock()
-
 	var res = []error{}
 
 	glog.Infof("Stopping all processes under %s", p.Name)
@@ -144,6 +209,9 @@ func (p *ProcessSet) stopAll() []error {
 		go func(proc *Process) {
 			defer wg.Done()
 			err := proc.stop()
+			if proc == p.Active {
+				p.Active = nil
+			}
 			if err != nil {
 				glog.Errorf("Failed to stop process %s (%s) due to %v", proc.Name, proc.Uid, err)
 				res = append(res, err)

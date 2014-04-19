@@ -70,6 +70,8 @@ type Config struct {
 	User         string
 	Group        string
 	UseStdPipe   bool
+
+	file string
 }
 
 func ReadConfiguration(file string) (*Config, error) {
@@ -83,7 +85,33 @@ func ReadConfiguration(file string) (*Config, error) {
 		return nil, err
 	}
 
+	config.file = file
+
 	return config, nil
+}
+
+func (c *Config) reload() error {
+	config, err := ReadConfiguration(c.file)
+	if err != nil {
+		return err
+	}
+
+	c.Name = config.Name
+	c.CallbackId = config.CallbackId
+	c.Tags = config.Tags
+	c.Command = config.Command
+	c.Args = config.Args
+	c.Directory = config.Directory
+	c.StopSequence = config.StopSequence
+	c.DrainSignal = config.DrainSignal
+	c.UseEnv = config.UseEnv
+	c.Envs = config.Envs
+	c.AllowDrain = config.AllowDrain
+	c.User = config.User
+	c.Group = config.Group
+	c.UseStdPipe = config.UseStdPipe
+
+	return nil
 }
 
 func (d *duration) UnmarshalText(text []byte) error {

@@ -55,6 +55,16 @@ func (c *Client) Recycle(process *models.CtrlProcessSet) error {
 	return nil
 }
 
+func (c *Client) Reload(process *models.CtrlProcessSet) error {
+	var reply *int
+	err := c.client.Call("Control.Reload", process, &reply)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *Client) Start(process *models.CtrlProcessSet) error {
 	var reply *int
 	err := c.client.Call("Control.Start", process, &reply)
