@@ -70,6 +70,8 @@ func loadProcessSetFromConfig(config *Config) *ProcessSet {
 		p.StopSequence = stopSequences
 	}
 
+	go p.listenToProcessEvents(processEvents)
+
 	return &p
 }
 
@@ -317,4 +319,36 @@ func (c *ProcessSet) toCtrlProcessSet() models.CtrlProcessSet {
 	}
 
 	return ctrlProcessSet
+}
+
+func (c *ProcessSet) listenToProcessEvents(events chan *Process) {
+	for {
+		select {
+		case r := <-events:
+			glog.V(Debug).Infof("Event received from %s (%s)", r.Name, r.Uid)
+
+			if r.statusCode == PS_UNMONITORED {
+				glog.V(Detail).Infof("Process %s stopped. Removing from the draining list", r.Uid)
+				// if the process is stopped, then take it of the drained list
+				c.removeDrained(r)
+			}
+		case <-time.After(50 * time.Millisecond):
+			// move along
+		}
+	}
+}
+
+func (c *ProcessSet) removeDrained(toRemove *Process) {
+	c.Lock()
+	defer c.Unlock()
+
+	newList := []*Process{}
+	for _, p := range c.Draining {
+		glog.V(Verbose).Infof("Comparing '%s' with '%s' to remove", p.Uid, toRemove.Uid)
+		if p.Uid != toRemove.Uid {
+			newList = append(newList, p)
+		}
+	}
+
+	c.Draining = newList
 }

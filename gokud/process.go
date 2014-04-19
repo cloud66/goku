@@ -360,6 +360,9 @@ func (p *Process) waitForProcess() {
 
 	p.setStatus(PS_UNMONITORED)
 
+	// notify everyone
+	processEvents <- p
+
 	glog.Infof("Process '%s' (%s) closed.", p.Name, p.Uid)
 }
 

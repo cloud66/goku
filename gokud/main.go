@@ -20,6 +20,7 @@ var flagConfName string
 var flagAutoStart bool
 var loadWait sync.WaitGroup
 var processes []*ProcessSet
+var processEvents = make(chan *Process)
 
 func main() {
 	args := os.Args[1:]

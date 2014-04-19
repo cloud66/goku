@@ -100,6 +100,25 @@ func TestTermToStop(t *testing.T) {
 	}
 }
 
+func TestDrainListRemoval(t *testing.T) {
+	p1 := Process{Uid: "1"}
+	p2 := Process{Uid: "2"}
+	p3 := Process{Uid: "3"}
+
+	p := ProcessSet{}
+	p.Draining = []*Process{&p1, &p2, &p3}
+
+	if len(p.Draining) != 3 {
+		t.Errorf("Failed to add draining processes %d", len(p.Draining))
+	}
+
+	p.removeDrained(&p2)
+
+	if len(p.Draining) != 2 {
+		t.Errorf("Failed to remove draining processes %d", len(p.Draining))
+	}
+}
+
 func TestForceToStop(t *testing.T) {
 	p := Process{
 		Name:      "TestForceToStop",

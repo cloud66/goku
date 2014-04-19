@@ -11,10 +11,17 @@ import (
 
 var cmdList = &Command{
 	Run:      runList,
-	Usage:    "list",
+	Usage:    "list [-v]",
 	Category: "process",
 	Short:    "lists all the processes under goku",
-	Long:     `This returns a list of all processes managed by goku with their status`,
+	Long:     `This returns a list of all processes managed by goku with their status
+	-v	Verbose. Lists all draining processes as well`,
+}
+
+var flagVerbose bool
+
+func init() {
+	cmdList.Flag.BoolVar(&flagVerbose, "v", false, "verbose reporting")
 }
 
 func runList(cmd *Command, args []string) {
@@ -41,11 +48,34 @@ func printProcessList(w io.Writer, servers *[]models.CtrlProcessSet) {
 }
 
 func listProcess(w io.Writer, a models.CtrlProcessSet) {
+	pid := 0
+	if a.Active != nil {
+		pid = a.Active.Pid
+	}
 	listRec(w,
 		a.Name,
+		pid,
 		a.Tags,
 		a.Status(),
 	)
+
+	if flagVerbose {
+		if a.Active != nil {
+			listRec(w,
+				a.Active.Uid,
+				a.Active.Pid,
+				prettyTime{a.Active.LastActionAt},
+				a.Active.Status.Message)
+		}
+		for _, p := range a.Draining {
+			lastActivity := prettyTime{p.LastActionAt}
+			listRec(w,
+				p.Uid,
+				p.Pid,
+				lastActivity,
+				p.Status.Message)
+		}
+	}
 }
 
 type processesByName []models.CtrlProcessSet
