@@ -120,7 +120,8 @@ func (p *Process) start() error {
 		err := p.startProcessByExec()
 		if err != nil {
 			p.setStatus(PS_UNKNOWN)
-			//return err
+			glog.Errorf("Failed to start %s (%s) due to %v", p.Name, p.Uid, err)
+			return
 		}
 		p.setStatus(PS_UP)
 		go p.waitForProcess()
