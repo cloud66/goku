@@ -65,6 +65,16 @@ func (c *Client) Reload(process *models.CtrlProcessSet) error {
 	return nil
 }
 
+func (c *Client) Load(file string) (*models.CtrlProcessSet, error) {
+	var reply *models.CtrlProcessSet
+	err := c.client.Call("Control.Load", file, &reply)
+	if err != nil {
+		return nil, err
+	}
+
+	return reply, nil
+}
+
 func (c *Client) Start(process *models.CtrlProcessSet) error {
 	var reply *int
 	err := c.client.Call("Control.Start", process, &reply)

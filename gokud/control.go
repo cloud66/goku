@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/rpc"
 	"net/rpc/jsonrpc"
+	"path/filepath"
 
 	"github.com/cloud66/goku/models"
 	"github.com/golang/glog"
@@ -27,6 +28,30 @@ func (c *Control) Stop(ctrlProcessSet *models.CtrlProcessSet, reply *int) error 
 		}
 	}()
 
+	return nil
+}
+
+// loads a new configuration into the daemon. the file should be located in the
+// config directory
+func (c *Control) Load(configName *string, reply *models.CtrlProcessSet) error {
+	config, err := ReadConfiguration(filepath.Join(flagConfName, *configName))
+	if err != nil {
+		return err
+	}
+
+	// do we have this already?
+	for _, item := range c.processSets {
+		if item.config.Name == config.Name {
+			return errors.New("configuration with the same name already loaded")
+		}
+	}
+
+	procSet := loadProcessSetFromConfig(config)
+
+	// add it to the list
+	c.processSets = append(c.processSets, procSet)
+
+	*reply = procSet.toCtrlProcessSet()
 	return nil
 }
 
