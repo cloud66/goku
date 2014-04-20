@@ -94,6 +94,11 @@ func (p *Process) setStatus(newStatus int) {
 }
 
 func (p *Process) start() error {
+	if p.Pid != 0 && p.isRunning() {
+		glog.Infof("Process %s (%s) is already running", p.Name, p.Uid)
+		return errors.New("Process is already running")
+	}
+
 	p.setStatus(PS_STARTING)
 
 	// make sure the needed folders are there
@@ -132,6 +137,11 @@ func (p *Process) start() error {
 }
 
 func (p *Process) stop() error {
+	if !p.isRunning() {
+		glog.Infof("Process %s (%s) is not running. Can't stop it.", p.Name, p.Uid)
+
+		return errors.New("Process is not running")
+	}
 	p.setStatus(PS_STOPPING)
 
 	for _, item := range p.StopSequence {
@@ -175,7 +185,22 @@ func (p *Process) stop() error {
 // it can stop the process in due course (DrainSignal.Wait) if needed
 // it waits for the drain and then stops the process by calling stop
 func (p *Process) drain(stop bool) error {
-	err := p.sendDrainSignal()
+	if !p.isRunning() {
+		glog.Infof("Process %s (%s) is not running. Can't drain it.", p.Name, p.Uid)
+		return errors.New("Process is not running")
+	}
+
+	p.setStatus(PS_DRAINING)
+
+	// move the pid file to a timestamped one
+	newPidfile := filepath.Join(PidFolder, p.Name+strconv.FormatInt(p.timestamp, 10)+".pid")
+	err := os.Rename(string(p.pidfile), newPidfile)
+	if err != nil {
+		return err
+	}
+	p.pidfile = Pidfile(newPidfile)
+
+	err = p.sendDrainSignal()
 	if err != nil {
 		p.setStatus(PS_UNKNOWN)
 		return err
@@ -196,6 +221,7 @@ func (p *Process) drain(stop bool) error {
 
 func (p *Process) isRunning() bool {
 	if err := syscall.Kill(p.Pid, 0); err != nil {
+		glog.V(Debug).Info(err)
 		return false
 	} else {
 		p.setStatus(PS_UNMONITORED)
@@ -205,8 +231,6 @@ func (p *Process) isRunning() bool {
 
 // send the drain signal
 func (p *Process) sendDrainSignal() error {
-	p.setStatus(PS_DRAINING)
-
 	err := p.sendSignal(p.DrainSignal.Signal)
 	if err != nil {
 		p.setStatus(PS_UNKNOWN)
@@ -277,8 +301,8 @@ func (p *Process) startProcessByExec() error {
 		p.groupId = gid
 	}
 
-	outLog := filepath.Join(LogFolder, p.Name+"_stdout_"+strconv.FormatInt(p.timestamp, 10)+".log")
-	errLog := filepath.Join(LogFolder, p.Name+"_stderr_"+strconv.FormatInt(p.timestamp, 10)+".log")
+	outLog := filepath.Join(LogFolder, p.Name+"_"+strconv.FormatInt(p.timestamp, 10)+"_stdout.log")
+	errLog := filepath.Join(LogFolder, p.Name+"_"+strconv.FormatInt(p.timestamp, 10)+"_stderr.log")
 	outLogFile, err := getLogfile(outLog)
 	if err != nil {
 		return err
@@ -287,7 +311,8 @@ func (p *Process) startProcessByExec() error {
 	if err != nil {
 		return err
 	}
-	p.pidfile = Pidfile(filepath.Join(PidFolder, p.Name+"_"+strconv.FormatInt(p.timestamp, 10)+".pid"))
+	// this is the active process, so the pid will be the same
+	p.pidfile = Pidfile(filepath.Join(PidFolder, p.Name+".pid"))
 
 	if len(p.Args) == 0 {
 		p.Args = []string{}

@@ -36,6 +36,7 @@ func (c *Control) Stop(ctrlProcessSet *models.CtrlProcessSet, reply *int) error 
 func (c *Control) Load(configName *string, reply *models.CtrlProcessSet) error {
 	config, err := ReadConfiguration(filepath.Join(flagConfName, *configName))
 	if err != nil {
+		glog.Error(err)
 		return err
 	}
 
@@ -58,11 +59,13 @@ func (c *Control) Load(configName *string, reply *models.CtrlProcessSet) error {
 func (c *Control) Reload(ctrlProcessSet *models.CtrlProcessSet, reply *int) error {
 	procSet, err := c.findProcessSet(ctrlProcessSet)
 	if err != nil {
+		glog.Error(err)
 		return err
 	}
 
 	err = procSet.reload()
 	if err != nil {
+		glog.Error(err)
 		return err
 	}
 
@@ -72,11 +75,13 @@ func (c *Control) Reload(ctrlProcessSet *models.CtrlProcessSet, reply *int) erro
 func (c *Control) Recycle(ctrlProcessSet *models.CtrlProcessSet, reply *int) error {
 	procSet, err := c.findProcessSet(ctrlProcessSet)
 	if err != nil {
+		glog.Error(err)
 		return err
 	}
 
 	err = procSet.recycle()
 	if err != nil {
+		glog.Error(err)
 		return err
 	}
 
@@ -86,11 +91,13 @@ func (c *Control) Recycle(ctrlProcessSet *models.CtrlProcessSet, reply *int) err
 func (c *Control) Start(ctrlProcessSet *models.CtrlProcessSet, reply *int) error {
 	procSet, err := c.findProcessSet(ctrlProcessSet)
 	if err != nil {
+		glog.Error(err)
 		return err
 	}
 
 	err = procSet.start()
 	if err != nil {
+		glog.Error(err)
 		return err
 	}
 
@@ -117,12 +124,14 @@ func registerServer(processSets []*ProcessSet) error {
 	server.HandleHTTP(rpc.DefaultRPCPath, rpc.DefaultDebugPath)
 	l, err := net.Listen("tcp", "127.0.0.1:1234")
 	if err != nil {
+		glog.Error(err)
 		return err
 	}
 
 	for {
 		conn, err := l.Accept()
 		if err != nil {
+			glog.Error(err)
 			return err
 		}
 

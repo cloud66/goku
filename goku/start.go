@@ -15,5 +15,8 @@ var cmdStart = &Command{
 func runStart(cmd *Command, args []string) {
 	process := mustProcess()
 
-	client.Start(process)
+	err := client.Start(process)
+	if err != nil {
+		printFatal(err.Error())
+	}
 }

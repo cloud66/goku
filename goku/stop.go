@@ -17,5 +17,8 @@ var cmdStop = &Command{
 func runStop(cmd *Command, args []string) {
 	process := mustProcess()
 
-	client.Stop(process)
+	err := client.Stop(process)
+	if err != nil {
+		printFatal(err.Error())
+	}
 }
