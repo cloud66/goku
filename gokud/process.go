@@ -19,13 +19,22 @@ import (
 const (
 	LogFolder = "/tmp/goku/logs"
 	PidFolder = "/tmp/goku/pids"
+	MAX_START_COUNTS = 5
 
+	// not running or we are unaware of the status
 	PS_UNMONITORED = 0
-	PS_UNKNOWN     = PS_UNMONITORED + 1
-	PS_STARTING    = PS_UNKNOWN + 1
-	PS_UP          = PS_STARTING + 1
-	PS_STOPPING    = PS_UP + 1
-	PS_DRAINING    = PS_STOPPING + 1
+	// unknown status. an error for example during a transition
+	PS_UNKNOWN     = 1
+	// process is starting. it is not completely functional yet
+	PS_STARTING    = 2
+	// process is up. all good
+	PS_UP          = 3
+	// process is due to be stopped intentinally
+	PS_STOPPING    = 4
+	// process is stopped unintentionally
+	PS_STOPPED		 = 5
+	// process is draining and will stop eventually
+	PS_DRAINING    = 6
 )
 
 var statusMap = map[int]string{
@@ -81,6 +90,7 @@ type Process struct {
 	groupId    int
 	statusCode int
 	processSet *ProcessSet
+	startCount int
 }
 
 func (p *Process) status() (int, string) {
@@ -221,7 +231,7 @@ func (p *Process) drain(stop bool) error {
 
 func (p *Process) isRunning() bool {
 	if err := syscall.Kill(p.Pid, 0); err != nil {
-		glog.V(Debug).Info(err)
+		glog.V(Debug).Infof("Looking for process with pid %d. %s", p.Pid, err.Error())
 		return false
 	} else {
 		p.setStatus(PS_UNMONITORED)
@@ -379,6 +389,22 @@ func (p *Process) waitForProcess() {
 	glog.Infof("Watching close of process '%s' (%s)", p.Name, p.Uid)
 
 	p.cmd.Process.Wait()
+
+	// proces is closed. was it an accident? have we not tried enough?
+	if p.statusCode != PS_STOPPING && p.startCount < MAX_START_COUNTS {
+		p.setStatus(PS_STOPPED)
+		glog.Infof("Unintentional stop detected for %s (%s). Trying to recover attempt %d", p.Name, p.Uid, p.startCount)
+
+		// start it again
+		p.startCount++
+		err := p.start()
+		if err != nil {
+			glog.Errorf("Failed to recover process %s (%s) from an unintentional stop, due to %s", p.Name, p.Uid, err.Error())
+		}
+
+		return
+	}
+
 	p.cmd.Process.Kill()
 	p.cmd.Process.Release()
 
@@ -390,6 +416,7 @@ func (p *Process) waitForProcess() {
 		p.processSet.removeDrained(p)
 	}
 
+	p.startCount = 0
 	glog.Infof("Process '%s' (%s) closed.", p.Name, p.Uid)
 }
 
