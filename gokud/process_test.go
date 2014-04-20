@@ -21,6 +21,7 @@ func TestStart(t *testing.T) {
 		Directory: "/bin",
 		Command:   "sleep",
 		Args:      []string{"1"},
+		dontRecover: true,
 	}
 
 	err := p.start()
@@ -44,6 +45,7 @@ func TestSimpleStop(t *testing.T) {
 		Name:      "TestSimpleStop",
 		Directory: "tests",
 		Command:   "stops_with_quit.sh",
+		dontRecover: true,
 	}
 
 	err := p.start()
@@ -73,6 +75,7 @@ func TestTermToStop(t *testing.T) {
 		Name:      "TestTermToStop",
 		Directory: "tests",
 		Command:   "stops_with_term.sh",
+		dontRecover: true,
 		StopSequence: []Instruction{
 			{Signal: syscall.SIGQUIT, Wait: 1},
 			{Signal: syscall.SIGTERM, Wait: 1},
@@ -124,6 +127,7 @@ func TestForceToStop(t *testing.T) {
 		Name:      "TestForceToStop",
 		Directory: "tests",
 		Command:   "stops_with_none.sh",
+		dontRecover: true,
 	}
 
 	err := p.start()
@@ -153,6 +157,7 @@ func TestStatus(t *testing.T) {
 		Name:      "TestStatus",
 		Directory: "tests",
 		Command:   "stops_with_term.sh",
+		dontRecover: true,
 		StopSequence: []Instruction{
 			{Signal: syscall.SIGQUIT, Wait: 1},
 			{Signal: syscall.SIGTERM, Wait: 0},
@@ -187,5 +192,38 @@ func TestStatus(t *testing.T) {
 
 	if p.statusCode != PS_UNMONITORED {
 		t.Errorf("Status is not unmonitored (%s)", statusMap[p.statusCode])
+	}
+}
+
+func TestRecovery(t *testing.T) {
+	p := Process{
+		Name:      "TestRecovery",
+		Directory: "/bin",
+		Command:   "sleep",
+		Args:      []string{"1"},
+	}
+
+	err := p.start()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !p.isRunning() {
+		t.Error("Process not running")
+	}
+
+	time.Sleep(1100 * time.Millisecond)
+
+	// should recover by now
+	if !p.isRunning() {
+		t.Error("Process not running")
+	}
+
+	p.stop()
+
+	time.Sleep(1100 * time.Millisecond)
+
+	if p.isRunning() {
+		t.Error("Process is running")
 	}
 }

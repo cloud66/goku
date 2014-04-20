@@ -17,24 +17,24 @@ import (
 )
 
 const (
-	LogFolder = "/tmp/goku/logs"
-	PidFolder = "/tmp/goku/pids"
+	LogFolder        = "/tmp/goku/logs"
+	PidFolder        = "/tmp/goku/pids"
 	MAX_START_COUNTS = 5
 
 	// not running or we are unaware of the status
 	PS_UNMONITORED = 0
 	// unknown status. an error for example during a transition
-	PS_UNKNOWN     = 1
+	PS_UNKNOWN = 1
 	// process is starting. it is not completely functional yet
-	PS_STARTING    = 2
+	PS_STARTING = 2
 	// process is up. all good
-	PS_UP          = 3
+	PS_UP = 3
 	// process is due to be stopped intentinally
-	PS_STOPPING    = 4
+	PS_STOPPING = 4
 	// process is stopped unintentionally
-	PS_STOPPED		 = 5
+	PS_STOPPED = 5
 	// process is draining and will stop eventually
-	PS_DRAINING    = 6
+	PS_DRAINING = 6
 )
 
 var statusMap = map[int]string{
@@ -82,15 +82,16 @@ type Process struct {
 
 	LastActionAt time.Time
 
-	x          *os.Process
-	timestamp  int64
-	cmd        *exec.Cmd
-	pidfile    Pidfile
-	userId     int
-	groupId    int
-	statusCode int
-	processSet *ProcessSet
-	startCount int
+	x           *os.Process
+	timestamp   int64
+	cmd         *exec.Cmd
+	pidfile     Pidfile
+	userId      int
+	groupId     int
+	statusCode  int
+	processSet  *ProcessSet
+	startCount  int
+	dontRecover bool
 }
 
 func (p *Process) status() (int, string) {
@@ -391,7 +392,7 @@ func (p *Process) waitForProcess() {
 	p.cmd.Process.Wait()
 
 	// proces is closed. was it an accident? have we not tried enough?
-	if p.statusCode != PS_STOPPING && p.startCount < MAX_START_COUNTS {
+	if p.statusCode != PS_STOPPING && p.startCount < MAX_START_COUNTS && !p.dontRecover {
 		p.setStatus(PS_STOPPED)
 		glog.Infof("Unintentional stop detected for %s (%s). Trying to recover attempt %d", p.Name, p.Uid, p.startCount)
 

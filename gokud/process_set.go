@@ -2,11 +2,11 @@ package main
 
 import (
 	"errors"
-	"reflect"
-	"sync"
-	"path/filepath"
-	"strings"
 	"fmt"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -327,6 +327,7 @@ func (p *ProcessSet) buildProcess() *Process {
 		Group:        p.Group,
 		UseStdPipe:   p.UseStdPipe,
 		processSet:   p,
+		dontRecover:  false,
 	}
 }
 

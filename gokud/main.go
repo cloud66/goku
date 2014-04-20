@@ -82,7 +82,7 @@ func loadConfiguration(configFile string) {
 		for _, err := range errs {
 			glog.Error(err.Error())
 		}
-		
+
 		return
 	}
 
