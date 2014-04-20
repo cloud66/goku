@@ -49,6 +49,11 @@ func (c *Control) Load(configName *string, reply *models.CtrlProcessSet) error {
 
 	procSet := loadProcessSetFromConfig(config)
 
+	errs := procSet.verifyPids()
+	if len(errs) != 0 {
+		return errs[0]
+	}
+
 	// add it to the list
 	c.processSets = append(c.processSets, procSet)
 
