@@ -80,6 +80,7 @@ type Process struct {
 	userId     int
 	groupId    int
 	statusCode int
+	processSet *ProcessSet
 }
 
 func (p *Process) status() (int, string) {
@@ -360,8 +361,9 @@ func (p *Process) waitForProcess() {
 
 	p.setStatus(PS_UNMONITORED)
 
-	// notify everyone
-	processEvents <- p
+	if p.processSet != nil {
+		p.processSet.removeDrained(p)
+	}
 
 	glog.Infof("Process '%s' (%s) closed.", p.Name, p.Uid)
 }

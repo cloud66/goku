@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloud66/cx/term"
-
 	"github.com/mgutz/ansi"
 )
 
@@ -73,7 +71,7 @@ func printWarning(message string, args ...interface{}) {
 }
 
 func mustConfirm(warning, desired string) {
-	if term.IsTerminal(os.Stdin) {
+	if IsTerminal(os.Stdin) {
 		printWarning(warning)
 		fmt.Printf("> ")
 	}

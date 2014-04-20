@@ -39,6 +39,7 @@ type ProcessSet struct {
 	config *Config
 }
 
+// creates a new ProcessSet from a Config
 func loadProcessSetFromConfig(config *Config) *ProcessSet {
 	p := ProcessSet{}
 	p.Name = config.Name
@@ -69,8 +70,6 @@ func loadProcessSetFromConfig(config *Config) *ProcessSet {
 		}
 		p.StopSequence = stopSequences
 	}
-
-	go p.listenToProcessEvents(processEvents)
 
 	return &p
 }
@@ -290,6 +289,7 @@ func (p *ProcessSet) buildProcess() *Process {
 		User:         p.User,
 		Group:        p.Group,
 		UseStdPipe:   p.UseStdPipe,
+		processSet:   p,
 	}
 }
 

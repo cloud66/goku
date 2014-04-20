@@ -40,7 +40,7 @@ func (c *Command) printUsage() {
 
 func (c *Command) printUsageTo(w io.Writer) {
 	if c.Runnable() {
-		fmt.Fprintf(w, "Usage: cx %s\n\n", c.FullUsage())
+		fmt.Fprintf(w, "Usage: goku %s\n\n", c.FullUsage())
 	}
 	fmt.Fprintln(w, strings.Trim(c.Long, "\n"))
 }
