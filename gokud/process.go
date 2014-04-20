@@ -193,7 +193,7 @@ func (p *Process) drain(stop bool) error {
 	p.setStatus(PS_DRAINING)
 
 	// move the pid file to a timestamped one
-	newPidfile := filepath.Join(PidFolder, p.Name+strconv.FormatInt(p.timestamp, 10)+".pid")
+	newPidfile := filepath.Join(PidFolder, p.Name+"_"+strconv.FormatInt(p.timestamp, 10)+".pid")
 	err := os.Rename(string(p.pidfile), newPidfile)
 	if err != nil {
 		return err

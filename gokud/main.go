@@ -65,6 +65,8 @@ func main() {
 }
 
 func loadConfiguration(configFile string) {
+	defer loadWait.Done()
+
 	glog.Infof("Loading %s", configFile)
 
 	conf, err := ReadConfiguration(configFile)
@@ -73,8 +75,18 @@ func loadConfiguration(configFile string) {
 	}
 
 	p := loadProcessSetFromConfig(conf)
+
+	errs := p.verifyPids()
+	if len(errs) != 0 {
+		glog.Errorf("Process %s cannot be loaded", p.Name)
+		for _, err := range errs {
+			glog.Error(err.Error())
+		}
+		
+		return
+	}
+
 	processes = append(processes, p)
-	loadWait.Done()
 
 	if flagAutoStart {
 		err = p.start()

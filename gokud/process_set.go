@@ -4,6 +4,10 @@ import (
 	"errors"
 	"reflect"
 	"sync"
+	"path/filepath"
+	"strings"
+	"fmt"
+	"syscall"
 	"time"
 
 	"github.com/cloud66/goku/models"
@@ -72,6 +76,39 @@ func loadProcessSetFromConfig(config *Config) *ProcessSet {
 	}
 
 	return &p
+}
+
+// asseses the current running processes compared with
+// the configuration. This is called during startup process
+// to warn agains leftover processes
+func (p *ProcessSet) verifyPids() []error {
+	glog.Infof("Verifying existing processes and pids for %s", p.Name)
+	var result []error
+	// load the list of all pids we have in the directory
+	files, err := filepath.Glob(filepath.Join(PidFolder, "*.pid"))
+	if err != nil {
+		return []error{err}
+	}
+
+	for _, file := range files {
+		glog.V(Debug).Infof("Found pid file %s", file)
+		base := filepath.Base(file)
+		if strings.HasPrefix(base, p.Name) {
+			glog.Infof("Found %s pid file from previous runs", file)
+			// get the pid
+			pidfile := Pidfile(file)
+			pid := pidfile.read()
+			// do we have such thing?
+			if err := syscall.Kill(pid, 0); err == nil {
+				glog.Infof("Process %s is still running with pid %d", p.Name, pid)
+				// it is running and is ours
+				// TODO: differentiate betwen not running and operation not permitted
+				result = append(result, errors.New(fmt.Sprintf("Process %s is already running with pid %d", p.Name, pid)))
+			}
+		}
+	}
+
+	return result
 }
 
 func (p *ProcessSet) reload() error {
