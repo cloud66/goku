@@ -14,7 +14,7 @@ var cmdList = &Command{
 	Usage:    "list [-v]",
 	Category: "process",
 	Short:    "lists all the processes under goku",
-	Long:     `This returns a list of all processes managed by goku with their status
+	Long: `This returns a list of all processes managed by goku with their status
 	-v	Verbose. Lists all draining processes as well`,
 }
 

@@ -1,15 +1,14 @@
 package main
 
-import (
-)
+import ()
 
 var cmdReload = &Command{
-	Run:      runReload,
-	Usage:    "reload",
+	Run:          runReload,
+	Usage:        "reload",
 	NeedsProcess: true,
-	Category: "process",
-	Short:    "reloads configuration for a process",
-	Long:     `This reloads the configuration file for a process set. It will try to do it
+	Category:     "process",
+	Short:        "reloads configuration for a process",
+	Long: `This reloads the configuration file for a process set. It will try to do it
 	on-the-fly but if the changes require a restart, it will kill the whole process set and start it
 	again.
 

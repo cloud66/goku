@@ -10,7 +10,7 @@ var cmdLoad = &Command{
 	Usage:    "load -c <configuration file>",
 	Category: "process",
 	Short:    "loads a new configuration without starting it",
-	Long:     `This loads a new process configuration into the daemon. The file should exist in the
+	Long: `This loads a new process configuration into the daemon. The file should exist in the
 	configuration directory of the daemon. To reload an existing configuration use the reload command.
 
 	Use the filename with the .toml extension only. Not the full path`,

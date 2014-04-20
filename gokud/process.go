@@ -430,6 +430,43 @@ func getLogfile(path string) (*os.File, error) {
 	return file, nil
 }
 
+// tries to kill a stuck process gracefully.
+// only
+func (p *Process) sunset() error {
+	glog.Infof("[SUNSET] Sunsetting process %s with pid %d", p.Name, p.Pid)
+	if p.AllowDrain {
+		glog.Infof("[SUNSET] Process %s allows draining. Trying draining first", p.Name)
+		p.sendSignal(p.DrainSignal.Signal)
+		time.Sleep(p.DrainSignal.Wait)
+	}
+
+	if p.isRunning() {
+		glog.Infof("[SUNSET] Process %s is still running after drainig. Trying the stop sequence", p.Name)
+		for _, item := range p.StopSequence {
+			glog.V(Detail).Infof("[SUNSET] Sending %s to pid %d", item.Signal, p.Pid)
+			err := p.sendSignalAndWait(item)
+			if err != nil {
+				return err
+			}
+
+			// is it running?
+			if !p.isRunning() {
+				return nil
+			}
+		}
+
+		// still running? use force
+		if p.isRunning() {
+			glog.Infof("[SUNSET] Process %s still running. Trying force", p.Name)
+			syscall.Kill(p.Pid, syscall.SIGKILL)
+			time.Sleep(100 * time.Millisecond)
+			p.x.Release()
+		}
+	}
+
+	return nil
+}
+
 func (p *Process) toCtrlProcess() models.CtrlProcess {
 	ctrlProcess := models.CtrlProcess{
 		Uid:          p.Uid,

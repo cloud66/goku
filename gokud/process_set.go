@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -103,7 +104,24 @@ func (p *ProcessSet) verifyPids() []error {
 				glog.Infof("Process %s is still running with pid %d", p.Name, pid)
 				// it is running and is ours
 				// TODO: differentiate betwen not running and operation not permitted
-				result = append(result, errors.New(fmt.Sprintf("Process %s is already running with pid %d", p.Name, pid)))
+
+				if flagAutoRecover {
+					// we can start new ones but need to sunset this one
+					// create a temp process
+					process := p.buildProcess()
+					process.Pid = pid
+					x, err := os.FindProcess(pid)
+					if err != nil {
+						result = append(result, errors.New(fmt.Sprintf("Cannot find the process to recover for %s", p.Name)))
+					}
+					process.x = x
+					process.pidfile = pidfile
+					go func() {
+						process.sunset()
+					}()
+				} else {
+					result = append(result, errors.New(fmt.Sprintf("Process %s is already running with pid %d", p.Name, pid)))
+				}
 			}
 		}
 	}

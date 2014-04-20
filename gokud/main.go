@@ -18,6 +18,7 @@ const (
 
 var flagConfName string
 var flagAutoStart bool
+var flagAutoRecover bool
 var loadWait sync.WaitGroup
 var processes []*ProcessSet
 
@@ -25,7 +26,8 @@ func main() {
 	args := os.Args[1:]
 
 	flag.StringVar(&flagConfName, "d", "", "configuration file directory (toml format)")
-	flag.BoolVar(&flagAutoStart, "s", false, "start the loaded configurations automatically")
+	flag.BoolVar(&flagAutoStart, "autostart", false, "start the loaded configurations automatically")
+	flag.BoolVar(&flagAutoRecover, "autorecover", false, "recover leftover processes")
 	flag.Parse()
 
 	if len(args) > 0 && args[0] == "help" {

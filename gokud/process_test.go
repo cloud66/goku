@@ -17,10 +17,10 @@ func init() {
 
 func TestStart(t *testing.T) {
 	p := Process{
-		Name:      "TestStart",
-		Directory: "/bin",
-		Command:   "sleep",
-		Args:      []string{"1"},
+		Name:        "TestStart",
+		Directory:   "/bin",
+		Command:     "sleep",
+		Args:        []string{"1"},
 		dontRecover: true,
 	}
 
@@ -42,9 +42,9 @@ func TestStart(t *testing.T) {
 
 func TestSimpleStop(t *testing.T) {
 	p := Process{
-		Name:      "TestSimpleStop",
-		Directory: "tests",
-		Command:   "stops_with_quit.sh",
+		Name:        "TestSimpleStop",
+		Directory:   "tests",
+		Command:     "stops_with_quit.sh",
 		dontRecover: true,
 	}
 
@@ -72,9 +72,9 @@ func TestSimpleStop(t *testing.T) {
 
 func TestTermToStop(t *testing.T) {
 	p := Process{
-		Name:      "TestTermToStop",
-		Directory: "tests",
-		Command:   "stops_with_term.sh",
+		Name:        "TestTermToStop",
+		Directory:   "tests",
+		Command:     "stops_with_term.sh",
 		dontRecover: true,
 		StopSequence: []Instruction{
 			{Signal: syscall.SIGQUIT, Wait: 1},
@@ -124,9 +124,9 @@ func TestDrainListRemoval(t *testing.T) {
 
 func TestForceToStop(t *testing.T) {
 	p := Process{
-		Name:      "TestForceToStop",
-		Directory: "tests",
-		Command:   "stops_with_none.sh",
+		Name:        "TestForceToStop",
+		Directory:   "tests",
+		Command:     "stops_with_none.sh",
 		dontRecover: true,
 	}
 
@@ -154,9 +154,9 @@ func TestForceToStop(t *testing.T) {
 
 func TestStatus(t *testing.T) {
 	p := Process{
-		Name:      "TestStatus",
-		Directory: "tests",
-		Command:   "stops_with_term.sh",
+		Name:        "TestStatus",
+		Directory:   "tests",
+		Command:     "stops_with_term.sh",
 		dontRecover: true,
 		StopSequence: []Instruction{
 			{Signal: syscall.SIGQUIT, Wait: 1},
