@@ -16,11 +16,16 @@ const (
 	Debug   = 3
 )
 
-var flagConfName string
-var flagAutoStart bool
-var flagAutoRecover bool
-var loadWait sync.WaitGroup
-var processes []*ProcessSet
+var (
+	flagConfName    string
+	flagAutoStart   bool
+	flagAutoRecover bool
+	loadWait        sync.WaitGroup
+	processes       []*ProcessSet
+	statusChange    chan *Process
+	VERSION         string = "dev"
+	BUILD_DATE      string = ""
+)
 
 func main() {
 	args := os.Args[1:]
@@ -48,6 +53,8 @@ func main() {
 		glog.Error(err)
 	}
 
+	statusChange = make(chan *Process)
+
 	glog.Infof("Loading configurations from %s", flagConfName)
 	for _, file := range files {
 		loadWait.Add(1)
@@ -56,6 +63,7 @@ func main() {
 	glog.Info("Waiting for all configurations to load")
 	loadWait.Wait()
 
+	go startNotifier(statusChange)
 	registerServer(processes)
 
 	glog.Info("Started. Control is now listening to tcp:1234")

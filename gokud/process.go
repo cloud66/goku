@@ -92,6 +92,7 @@ type Process struct {
 	processSet  *ProcessSet
 	startCount  int
 	dontRecover bool
+	lastStatus  int
 }
 
 func (p *Process) status() (int, string) {
@@ -100,8 +101,12 @@ func (p *Process) status() (int, string) {
 
 func (p *Process) setStatus(newStatus int) {
 	glog.V(Detail).Infof("Process %s (%s) status is chaning %s -> %s", p.Name, p.Uid, statusMap[p.statusCode], statusMap[newStatus])
+	p.lastStatus = p.statusCode
 	p.statusCode = newStatus
 	p.LastActionAt = time.Now()
+	if statusChange != nil {
+		statusChange <- p
+	}
 }
 
 func (p *Process) start() error {

@@ -15,6 +15,12 @@ type Control struct {
 	processSets []*ProcessSet
 }
 
+// returns the server verison
+func (c *Control) Version(_ *int, reply *models.CtrlVersion) error {
+	reply = &models.CtrlVersion{Version: VERSION, BuildDate: BUILD_DATE}
+	return nil
+}
+
 func (c *Control) Stop(ctrlProcessSet *models.CtrlProcessSet, reply *int) error {
 	procSet, err := c.findProcessSet(ctrlProcessSet)
 	if err != nil {
