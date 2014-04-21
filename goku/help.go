@@ -35,6 +35,7 @@ var cmdVersion = &Command{
 
 func runVersion(cmd *Command, args []string) {
 	fmt.Println(VERSION)
+	fmt.Printf("Server: %s\n", client.Version())
 	if debugMode {
 		fmt.Println("Running in debug mode")
 		fmt.Printf("Build date: %s\n", BUILD_DATE)

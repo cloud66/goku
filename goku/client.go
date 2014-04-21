@@ -25,6 +25,21 @@ func (c *Client) initializeRpc(serverAddress string) error {
 	return nil
 }
 
+func (c *Client) Version() string {
+	var reply *models.CtrlVersion
+
+	err := c.client.Call("Control.Version", 1, &reply)
+	if err != nil {
+		return err.Error()
+	}
+
+	if reply.BuildDate != "" {
+		return reply.Version + ", " + reply.BuildDate
+	} else {
+		return reply.Version
+	}
+}
+
 func (c *Client) List() (*[]models.CtrlProcessSet, error) {
 	var reply *[]models.CtrlProcessSet
 

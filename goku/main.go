@@ -89,6 +89,7 @@ var commands = []*Command{
 	cmdReload,
 	cmdLoad,
 	cmdHelp,
+	cmdVersion,
 
 	helpCommands,
 	helpEnviron,

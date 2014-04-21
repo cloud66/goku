@@ -17,7 +17,8 @@ type Control struct {
 
 // returns the server verison
 func (c *Control) Version(_ *int, reply *models.CtrlVersion) error {
-	reply = &models.CtrlVersion{Version: VERSION, BuildDate: BUILD_DATE}
+	glog.V(Detail).Infof("Version: %s, Build date: %s", VERSION, BUILD_DATE)
+	*reply = models.CtrlVersion{Version: VERSION, BuildDate: BUILD_DATE}
 	return nil
 }
 
