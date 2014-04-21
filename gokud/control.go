@@ -133,7 +133,7 @@ func registerServer(processSets []*ProcessSet) error {
 	server := rpc.NewServer()
 	server.Register(control)
 	server.HandleHTTP(rpc.DefaultRPCPath, rpc.DefaultDebugPath)
-	l, err := net.Listen("tcp", "127.0.0.1:1234")
+	l, err := net.Listen("tcp", "0.0.0.0:9800")
 	if err != nil {
 		glog.Error(err)
 		return err

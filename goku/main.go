@@ -32,6 +32,8 @@ var (
 	BUILD_DATE      string = ""
 	flagProcessName string
 	flagProcess     *models.CtrlProcessSet
+	flagDaemon      string
+	config          Config
 )
 
 func (c *Command) printUsage() {
@@ -86,16 +88,23 @@ var commands = []*Command{
 	cmdRecycle,
 	cmdReload,
 	cmdLoad,
+	cmdHelp,
 
-	/*	helpCommands,
-		helpEnviron,
-		helpMore,*/
+	helpCommands,
+	helpEnviron,
+	helpMore,
 }
 
-var serverAddress = "127.0.0.1"
+var serverAddress string
 
 func main() {
-	honeybadger.ApiKey = "2188ca35"
+	err := config.Load()
+	if err != nil {
+		printFatal(err.Error())
+	}
+
+	honeybadger.ApiKey = config.HoneybadgerApi
+	serverAddress = config.ServerAddress
 
 	// make sure command is specified, disallow global args
 	args := os.Args[1:]

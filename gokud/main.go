@@ -66,7 +66,7 @@ func main() {
 	go startNotifier(statusChange)
 	registerServer(processes)
 
-	glog.Info("Started. Control is now listening to tcp:1234")
+	glog.Info("Started. Control is now listening to tcp:9800")
 
 	// sleep
 	for {

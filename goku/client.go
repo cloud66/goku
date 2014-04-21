@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/rpc"
 	"net/rpc/jsonrpc"
+	"strconv"
 
 	"github.com/cloud66/goku/models"
 )
@@ -15,7 +16,7 @@ type Client struct {
 
 func (c *Client) initializeRpc(serverAddress string) error {
 	// connect to the server
-	conn, err := net.Dial("tcp", serverAddress+":1234")
+	conn, err := net.Dial("tcp", serverAddress+":"+strconv.Itoa(config.ServerPort))
 	if err != nil {
 		log.Fatal("dialing:", err)
 	}
