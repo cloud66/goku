@@ -53,6 +53,7 @@ type Instruction struct {
 
 var (
 	defaultStopSequence = []Instruction{
+		{Signal: syscall.SIGTERM, Wait: 5},
 		{Signal: syscall.SIGQUIT, Wait: 5},
 		{Signal: syscall.SIGKILL, Wait: 0},
 	}

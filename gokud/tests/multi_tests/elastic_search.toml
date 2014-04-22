@@ -1,0 +1,7 @@
+# a full process configuration
+Name         = "elasticsearch"
+CallbackId   = "es"
+Tags         = ["web", "search"]
+Command      = "elasticsearch"
+UseEnv       = true
+AllowDrain   = false
