@@ -14,7 +14,12 @@ var cmdRecycle = &Command{
 }
 
 func runRecycle(cmd *Command, args []string) {
-	process := mustProcess()
+	processes := mustProcess()
 
-	client.Recycle(process)
+	for _, process := range *processes {
+		err := client.Recycle(&process)
+		if err != nil {
+			printFatal(err.Error())
+		}
+	}
 }

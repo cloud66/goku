@@ -31,6 +31,8 @@ var (
 	VERSION         string = "dev"
 	BUILD_DATE      string = ""
 	flagProcessName string
+	flagTagName     string
+	flagTagProcess  *[]models.CtrlProcessSet
 	flagProcess     *models.CtrlProcessSet
 	flagDaemon      string
 	config          Config
@@ -49,7 +51,7 @@ func (c *Command) printUsageTo(w io.Writer) {
 
 func (c *Command) FullUsage() string {
 	if c.NeedsProcess {
-		return c.Name() + " [-p <process>]" + strings.TrimPrefix(c.Usage, c.Name())
+		return c.Name() + " [-p <process>|-t <tag>]" + strings.TrimPrefix(c.Usage, c.Name())
 	}
 	return c.Usage
 }
@@ -136,6 +138,7 @@ func main() {
 			}
 			if cmd.NeedsProcess {
 				cmd.Flag.StringVar(&flagProcessName, "p", "", "process name")
+				cmd.Flag.StringVar(&flagTagName, "t", "", "tag name")
 			}
 			if err := cmd.Flag.Parse(args[1:]); err != nil {
 				os.Exit(2)
@@ -195,11 +198,20 @@ func recoverPanic() {
 	}
 }
 
-func process() (*models.CtrlProcessSet, error) {
-	if flagProcess != nil {
-		return flagProcess, nil
+func process() (*[]models.CtrlProcessSet, error) {
+	if flagProcessName != "" && flagTagName != "" {
+		printFatal("cannot use both tags (t) and process name (p).")
 	}
 
+	if flagTagProcess != nil {
+		return flagTagProcess, nil
+	}
+
+	if flagProcess != nil {
+		return &[]models.CtrlProcessSet{*flagProcess}, nil
+	}
+
+	// process name is specified (-p)
 	if flagProcessName != "" {
 		processes, err := client.List()
 		if err != nil {
@@ -216,13 +228,35 @@ func process() (*models.CtrlProcessSet, error) {
 
 		flagProcess = &(*processes)[idx]
 		fmt.Printf("Process: %s\n", flagProcess.Name)
-		return flagProcess, err
+		return &[]models.CtrlProcessSet{*flagProcess}, err
+	}
+
+	// process tag is specified (-t)
+	if flagTagName != "" {
+		processes, err := client.List()
+		if err != nil {
+			return nil, err
+		}
+
+		var foundProcesses []models.CtrlProcessSet
+
+		for _, process := range *processes {
+			for _, tag := range process.Tags {
+				if strings.ToLower(tag) == strings.ToLower(flagTagName) {
+					foundProcesses = append(foundProcesses, process)
+					fmt.Printf("Found process %s\n", process.Name)
+				}
+			}
+		}
+
+		flagTagProcess = &foundProcesses
+		return flagTagProcess, nil
 	}
 
 	return nil, errors.New("No process found")
 }
 
-func mustProcess() *models.CtrlProcessSet {
+func mustProcess() *[]models.CtrlProcessSet {
 	process, err := process()
 	if err != nil {
 		printFatal(err.Error())

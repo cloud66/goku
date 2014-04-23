@@ -16,7 +16,12 @@ var cmdReload = &Command{
 }
 
 func runReload(cmd *Command, args []string) {
-	process := mustProcess()
+	processes := mustProcess()
 
-	client.Reload(process)
+	for _, process := range *processes {
+		err := client.Reload(&process)
+		if err != nil {
+			printFatal(err.Error())
+		}
+	}
 }

@@ -1,6 +1,7 @@
 package main
 
-import ()
+import (
+	)
 
 var cmdStart = &Command{
 	Run:          runStart,
@@ -12,10 +13,12 @@ var cmdStart = &Command{
 }
 
 func runStart(cmd *Command, args []string) {
-	process := mustProcess()
+	processes := mustProcess()
 
-	err := client.Start(process)
-	if err != nil {
-		printFatal(err.Error())
+	for _, process := range *processes {
+		err := client.Start(&process)
+		if err != nil {
+			printFatal(err.Error())
+		}
 	}
 }

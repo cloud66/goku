@@ -14,10 +14,12 @@ var cmdStop = &Command{
 }
 
 func runStop(cmd *Command, args []string) {
-	process := mustProcess()
+	processes := mustProcess()
 
-	err := client.Stop(process)
-	if err != nil {
-		printFatal(err.Error())
+	for _, process := range *processes {
+		err := client.Stop(&process)
+		if err != nil {
+			printFatal(err.Error())
+		}
 	}
 }

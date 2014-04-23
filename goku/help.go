@@ -104,7 +104,7 @@ func maxStrLen(strs []string) (strlen int) {
 }
 
 var usageTemplate = template.Must(template.New("usage").Parse(`
-Usage: goku <command> [-p process] [options] [arguments]
+Usage: goku <command> [-p process|-t tag] [options] [arguments]
 
 
 Commands:
