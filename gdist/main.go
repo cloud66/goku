@@ -30,10 +30,11 @@ var (
 	flags       flag.FlagSet
 	flagVersion string
 	flagBranch  string
+	flagApp     string
 )
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "Usage: gdist (build|publish|latest) -v <version> -b <branch>")
+	fmt.Fprintln(os.Stderr, "Usage: gdist (build|publish|latest) -v <version> -b <branch> -a <goku|gokud>")
 	os.Exit(2)
 }
 
@@ -42,6 +43,7 @@ func main() {
 
 	flags.StringVar(&flagVersion, "v", "dev", "build version")
 	flags.StringVar(&flagBranch, "b", "master", "build branch")
+	flags.StringVar(&flagApp, "a", "goku", "app name")
 
 	if len(os.Args) == 1 {
 		usage()
@@ -56,6 +58,11 @@ func main() {
 
 	if cmd != "build" && cmd != "publish" && cmd != "latest" {
 		usage()
+	}
+
+	if flagApp == "" || (flagApp != "goku" && flagApp != "gokud") {
+		usage()
+		os.Exit(2)
 	}
 
 	pwd, err := os.Getwd()

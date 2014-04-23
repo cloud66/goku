@@ -30,15 +30,15 @@ type GokuLatest struct {
 	Version string `json:"latest"`
 }
 
-const (
-	S3_URL = "http://s3.amazonaws.com/downloads.cloud66.com/goku/"
-)
-
 var (
-	downloadRegexp = regexp.MustCompile(`goku_(.*?)_(.*?)_(.*?)\.`)
+	downloadRegexp *regexp.Regexp
+	S3_URL         string
 )
 
 func publish() {
+	downloadRegexp = regexp.MustCompile(flagApp + `_(.*?)_(.*?)_(.*?)\.`)
+	S3_URL = "http://s3.amazonaws.com/downloads.cloud66.com/" + flagApp + "/"
+
 	s3util.DefaultConfig.AccessKey = os.Getenv("AWS_ACCESS_KEY_ID")
 	s3util.DefaultConfig.SecretKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
 
@@ -67,20 +67,17 @@ func publish() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	manifestFile := filepath.Join(publishDir, flagVersion, "goku_" + flagVersion + ".json")
+	manifestFile := filepath.Join(publishDir, flagVersion, flagApp+"_"+flagVersion+".json")
 	manifest, err := os.Create(manifestFile)
 	defer manifest.Close()
 
 	manifest.Write(b)
-	upload(manifestFile, S3_URL+"goku_" + flagVersion + ".json")
+	upload(manifestFile, S3_URL+flagApp+"_"+flagVersion+".json")
 
 	// update the latest version file unless it's dev
 	if flagVersion != "dev" {
 		latest := GokuLatest{Version: flagVersion}
 		latest.upload()
-
-		fmt.Println("Notifying Honeybadger of deploy")
-		resetHoneybadger()
 	}
 
 	fmt.Printf("Version %s published and is live now\n", flagVersion)
@@ -91,7 +88,7 @@ func (download *GokuDownload) upload() error {
 }
 
 func (latest *GokuLatest) upload() error {
-	localLatest := filepath.Join(publishDir, flagVersion, "goku_latest.json")
+	localLatest := filepath.Join(publishDir, flagVersion, flagApp+"_latest.json")
 	writer, err := os.Create(localLatest)
 	defer writer.Close()
 	if err != nil {
@@ -104,11 +101,11 @@ func (latest *GokuLatest) upload() error {
 	}
 	writer.Write(b)
 
-	return upload(localLatest, S3_URL+"goku_latest.json")
+	return upload(localLatest, S3_URL+flagApp+"_latest.json")
 }
 
 func findLatestVersion() (*GokuLatest, error) {
-	resp, err := http.Get(S3_URL + "goku_latest.json")
+	resp, err := http.Get(S3_URL + flagApp + "_latest.json")
 	if err != nil {
 		return nil, err
 	} else if resp.StatusCode != 200 {
@@ -157,26 +154,6 @@ func calculateChecksum(localFile string) (string, error) {
 	}
 
 	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
-func resetHoneybadger() {
-	var req *http.Request
-	var resp *http.Response
-
-	req, err := http.NewRequest("POST", "https://api.honeybadger.io/v1/deploys?deploy[environment]=production&deploy[local_username]=admin&deploy[revision]="+flagVersion+"&api_key=09d82034", nil)
-	if err != nil {
-		log.Fatalf("Reseting Honeybadger failed: %v\n", err)
-		return
-	}
-
-	if resp, err = http.DefaultClient.Do(req); err != nil {
-		log.Fatalf("Failed to reset Honeybadger: %v\n", err)
-		return
-	}
-
-	if resp.StatusCode < 201 {
-		log.Fatalf("Unable to send Honeybadger reset: %v\n", resp.StatusCode)
-	}
 }
 
 func getDownloads(version string) ([]GokuDownload, error) {

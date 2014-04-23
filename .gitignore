@@ -31,3 +31,5 @@ _testmain.go
 /gdist/tmp/
 
 /gdist/gdist
+
+/gdist/build/
