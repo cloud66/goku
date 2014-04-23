@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"errors"
+	"os/exec"
 	"io"
 	"os"
 	"strconv"
@@ -34,25 +35,15 @@ func lookupGroupId(group string) (gid int, err error) {
 }
 
 func lookupUserId(user string) (uid int, err error) {
-	f, err := os.Open("id -u " + user)
+	cmd, err := exec.Command("id","-u", user).Output()
 	if err != nil {
-		return
+		return -1, errors.New("user not found")
 	}
-	defer f.Close()
 
-	br := bufio.NewReader(f)
-	for {
-		s, err := br.ReadString('\n')
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return 0, err
-		}
-		p := strings.Split(s, ":")
-		if len(p) >= 3 && p[0] == user {
-			return strconv.Atoi(p[2])
-		}
+	result, err := strconv.Atoi(strings.Trim(string(cmd), "\n"))
+	if err != nil {
+		return -1, err
 	}
-	return 0, errors.New("user not found")
+
+	return result, nil
 }
