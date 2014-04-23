@@ -173,7 +173,7 @@ func main() {
 }
 
 func initClients() {
-	client.initializeRpc("127.0.0.1")
+	client.initializeRpc(config.ServerAddress)
 }
 
 func recoverPanic() {
