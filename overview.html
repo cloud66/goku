@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset='utf-8'>
+		<meta http-equiv="X-UA-Compatible" content="chrome=1">
+		<link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+		<link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+		<!--[if lt IE 9]>
+		<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+		<![endif]-->
+		<title>Goku | Process Manager Build for Scale | Cloud 66</title>
+	</head>
+
+	<body>
+		<div id="container">
+			<div class="inner">
+
+				<header>
+					<h1><a href="http://goku.cloud66.com">Goku</a></h1>
+				</header>
+				<hr class="short">
+				<section id="main_content">
+					<h3>
+<a name="getting-started" class="anchor" href="#getting-started"><span class="octicon octicon-link"></span></a>Getting Started</h3>
+
+<p>Getting started with Goku is easy.</p>
+
+<h4>goku and gokud</h4>
+<p>Goku comes in two parts: </p>
+<ol>
+<li><strong>gokud</strong> is the main engine. It owns, starts, stops and recycles the processes on the server.</li>
+<li><strong>goku</strong> is the controller part. It uses <strong>gokud</strong> control API to allow you control the engine through command line if you want.</li>
+</ol>
+
+<p>goku communicates with gokud through <a href="http://json-rpc.org/">JSON-RPC</a> through HTTP. This menas you can write gokud API clients in almost any lauguage and integrate them into your own applications.</p>
+<p>In this tutorial, <strong>Goku</strong> (with capital G) is used to refer to the project. <strong>goku</strong> and <strong>gokud</strong> are used to refer to the executables.</p>
+
+<h4>Starting with Goku</h4>
+<p>When installing Goku, you have two options: download the binaries or build it from the <a href="https://github.com/cloud66/goku">source</a>. Goku is written in Go so building it from the source is easy. We also provide compiled binaries for OS X and Linux (64-bit architecture only).</p>
+
+<h5>Downloading Binaries</h5>
+<ul>
+<li><a href="http://downloads.cloud66.com/goku/goku_darwin_amd64.zip">goku OSX 64-bit</a></li>
+<li><a href="http://downloads.cloud66.com/gokud/gokud_darwin_amd64.zip">gokud OSX 64-bit</a></li>
+<li><a href="http://downloads.cloud66.com/goku/goku_linux_amd64.tar.gz">goku Linux 64-bit</a></li>
+<li><a href="http://downloads.cloud66.com/gokud/gokud_linux_amd64.tar.gz">gokud Linux 64-bit</a></li>
+</ul>
+
+<p>Currently there are no plans to support and provide binaries for other platforms and architectures.</p>
+
+<h5>Building from Source</h5>
+<p>Clone the git repository and build it:</p>
+<pre><code>$ git clone https://github.com/cloud66/goku.git goku
+$ cd goku/gokud
+$ go build
+$ cd ../goku
+$ go build
+</code></pre>
+
+<p>This will build both goku and gokud.</p>
+<h3><a name="goku-configuration" class="anchor" href="#goku-configuration"><span class="octicon octicon-link"></span></a>Goku Configuration Files</h3>
+<p>Goku uses <a href="https://github.com/mojombo/toml">toml</a> as the format for its configuration files. Toml is human readable and isn't too precious about tabs and spaces. Here is an example of a Goku configuraiton file:</p>
+
+<pre><code># just a simple sleepy process
+Name         = "My Sleepy Process"
+Command      = "sleep"
+Args         = ["1"]
+</code></pre>
+
+<p>This defines a simple process that runs the <code>sleep 1</code> command. The configuration file is self explainatory but some points might be worth mentioning:</p>
+<ul>
+	<li>Before running the process, Goku tries to find the exact location of the executable within <code>$PATH</code>. In this case it will run <code>/bin/sleep</code></li>
+	<li>All arguments are passed in strings</li>
+	<li>Name is used to refer to the process through the API</li>
+</ul>
+
+<p>Read <a href="configuration.html">Goku Configuraion Files</a> for detailed information about all the parameters in configuration files.</p>
+
+<h3><a name="goku-configuration-directory" class="anchor" href="#goku-configuration-directory"><span class="octicon octicon-link"></span></a>Configuration Directory</h3>
+<p>gokud expects all configuration toml files to be in the same directory. The path to this directory is passed into gokud with <code>-d</code> parameter when starting gokud.</p>
+
+<pre><code>$ gokud -d /path/to/configuration/directory
+</code></pre>
+
+Any file with <code>.toml</code> extension will be read and loaded. By default processes are not started when gokud starts. This can be changed with <code>-autostart</code>
+parameter is used when starting gokud.
+
+</section>
+
+<footer>
+	Goku is maintained by <a href="http://www.cloud66.com">Cloud 66</a><br>
+</footer>
+</div>
+</div>
+</body>
+</html>

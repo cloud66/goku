@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset='utf-8'>
+		<meta http-equiv="X-UA-Compatible" content="chrome=1">
+		<link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+		<link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+		<!--[if lt IE 9]>
+		<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+		<![endif]-->
+		<title>Goku | Process Manager Build for Scale | Cloud 66</title>
+	</head>
+
+	<body>
+		<div id="container">
+			<div class="inner">
+
+				<header>
+					<h1><a href="http://goku.cloud66.com">Goku</a></h1>
+				</header>
+				<hr class="short">
+				<section id="main_content">
+					<h3>
+<a name="getting-started" class="anchor" href="#getting-started"><span class="octicon octicon-link"></span></a>Goku Configuration File</h3>
+
+<p>This is a configuration file in its full glory:</p>
+<pre><code># a full process configuration
+Name         = "My Process"
+Command      = "unicorn"
+Args         = ["-r", "-speed=fast"]
+Directory    = "/var/jungle"
+UseEnv       = false
+Envs         = ["MY_ENV=1", "HERE_IS_ANOTHER_ONE=yes"]
+User         = "user"
+Group        = "group"
+AllowDrain   = true
+Tags         = ["tag1", "tag2"]
+CallbackId   = "cc695a98f39847dea67dfd0df41c8688"
+[[StopSequence]]
+Signal = "term"
+Wait   = "10s"
+[[StopSequence]]
+Signal = "kill"
+Wait   = "1s"
+[DrainSignal]
+Signal = "usr2"
+Wait   = "1m"
+</code></pre>
+
+<p>Let's see what each parameter means</p>
+<h5>Name <strong class="dim">&ndash; Required</strong></h5>
+<p>Unique name for the process. Used to address it in command line or the API.</p>
+
+<h5>Command <strong class="dim">&ndash; Required</strong></h5>
+<p>Name of the executable to run. It should not contain path or any parameters. Goku always tries to find the full path of the command in <code>$PATH</code>.</p>
+
+<h5>Args</h5>
+<p>List of arguments passed into the command. All arguments should be strings.
+<br/>Default: <code>[]</code>
+</p>
+
+<h5>Directory</h5>
+<p>Working directory for the process.
+<br/>Default: <code>""</code>
+</p>
+
+<h5>UseEnv</h5>
+<p>Boolean If true gokud will run the process with the same environment variables running gokud itself.
+<br/>Default: <code>true</code>
+</p>
+
+<h5>Envs</h5>
+<p>A list of environment variables with their values that will be made available to the process. This is only used when <code>UseEnv</code> is <code>false</code>
+<br/>Default: <code>[]</code></p>
+
+<h5>User</h5>
+<p>Name of the Unix user running the process. If not present, the same user running gokud is used.
+<br/>Default: <code>""</code></p>
+
+<h5>Group</h5>
+<p>Name of the Unix group running the process. If not present, the same group running gokud is used.
+<br/>Default: <code>""</code></p>
+
+<h5>AllowDrain</h5>
+<p>Boolean. If true it indicates this process supports draining. See <code>DrainSignal</code>
+<br/>Default: <code>false</code></p>
+
+<h5>Tags</h5>
+<p>A list of string tags for this process. Used by the command line to address a group of processes.
+<br/>Default: <code>[]</code></p>
+
+<h5>CallbackId</h5>
+<p>Used by notifications. When the process status changes and Goku sends a notification, this Id is sent back so the server can identify it.
+<br/>Default: <code>""</code></p>
+
+<h5>StopSequence</h5>
+<p>Array. This specifies the sequence of Unix signals that should be sent to the process and the time that's needed to wait between each one in order to stop the process.</p>
+<p>The valid values for Signal are:<code>abrt</code>,<code>alrm</code>,<code>bus</code>,<code>chld</code>,<code>cont</code>,<code>fpe</code>,<code>hup</code>,<code>ill</code>,
+<code>int</code>,<code>io</code>,<code>iot</code>,<code>kill</code>,<code>pipe</code>,<code>prof</code>,<code>quit</code>,<code>segv</code>,<code>stop</code>,<code>sys</code>,<code>term</code>,<code>trap</code>,<code>tstp</code><code>
+ttin</code>,<code>ttou</code>,<code>urg</code>,<code>usr1</code>,<code>usr2</code>,<code>vtalrm</code>,<code>winch</code>,<code>xcpu</code>,<code>xfsz</code></p>
+<p>Wait is the duration that gokud waits before checking to see if the process is stopped. If the process is still running
+after the wait, it will send the next signal in the sequence.</p>
+<p>Valid values for Wait consist of a positive number and a unit. Units can be one of these: <code>ms</code>, <code>s</code>, <code>m</code>, <code>h</code> for Millisecond,
+Second, Minues and Hours. It could also be a combination like <code>2h45m</code> or <code>1m25s</code>. A 0 wait duration means "no wait".</p>
+<p>StopSequence is a toml array. In the example above, a <code>term</code> signal is sent to the process followed by a <code>kill</code> signal, 10 seconds later if the process is still running.</p>
+<p>If a process is still running after all signals in the sequence have been sent and waits is over, goku will try to forcefully kill the process.</p>
+<p>Default: <code>term</code> for <code>5s</code>, <code>quit</code> for <code>5s</code>, <code>kill</code> for <code>0s</code></p>
+
+<h5>DrainSignal</h5>
+<p>Draining (or recycling) is the process of trying to stop a process from taking on new work while starting a new similar process to handle new workload. This will result in a smooth and seamless restart (hot restart).</p>
+<p>An example of this could be a web server. Restarting a web server can result in loss of traffic or service interruption. If the web server supports hot restarts (like <strong>unicorn</strong> for example), a restart can be performed
+by sending a "drain" signal to the running process which stops it from serving any new clients. While the old process is finishing the existing clients it is serving, we can start a new process with the same configuration to take on new clients.
+Once the old process has finished serving its old clients, it can be killed.</p>
+<p>DrainSignal configures the Unix signal to be sent to the process to start draining as well as the wait needed after that before the process is stopped. Once the wait is over, a <code>StopSequence</code> is started to stop the process gracefully.
+If the process is still running at the end of the StopSequence, it will be forcefully killed.</p>
+<p>Default: None</p>
+
+</section>
+
+<footer>
+	Goku is maintained by <a href="http://www.cloud66.com">Cloud 66</a><br>
+</footer>
+</div>
+</div>
+</body>
+</html>
