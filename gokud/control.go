@@ -149,8 +149,6 @@ func registerServer(processSets []*ProcessSet) error {
 
 		go server.ServeCodec(jsonrpc.NewServerCodec(conn))
 	}
-
-	return nil
 }
 
 func (c *Control) findProcessSet(ctrlProcessSet *models.CtrlProcessSet) (*ProcessSet, error) {

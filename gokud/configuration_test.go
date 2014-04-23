@@ -31,10 +31,10 @@ func TestSimpleConfig(t *testing.T) {
 		t.Errorf("Directory not loaded: %s", conf.Directory)
 	}
 	if !conf.UseEnv {
-		t.Errorf("UseEnv not loaded: %s", conf.UseEnv)
+		t.Errorf("UseEnv not loaded: %t", conf.UseEnv)
 	}
 	if conf.AllowDrain {
-		t.Errorf("AllowDrain not loaded: %s", conf.AllowDrain)
+		t.Errorf("AllowDrain not loaded: %t", conf.AllowDrain)
 	}
 	if conf.User != "user" {
 		t.Errorf("User not loaded: %s", conf.User)
