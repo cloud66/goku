@@ -84,8 +84,61 @@ Args         = ["1"]
 <pre><code>$ gokud -d /path/to/configuration/directory
 </code></pre>
 
-Any file with <code>.toml</code> extension will be read and loaded. By default processes are not started when gokud starts. This can be changed with <code>-autostart</code>
-parameter is used when starting gokud.
+<p>Any file with <code>.toml</code> extension will be read and loaded. By default processes are not started when gokud starts. This can be changed with <code>-autostart</code>
+parameter is used when starting gokud.</p>
+
+<h3><a name="using-command-line" class="anchor" href="#using-command-line"><span class="octicon octicon-link"></span></a>Using Command Line</h3>
+<p>gokud does not run as a daemon. This is intentional. We didn't want to build a replacement for <a href="http://upstart.ubuntu.com/">upstart</a> or <a href="https://wiki.debian.org/systemd">systemd</a> and wanted to make sure you can run gokud in the foreground if
+you would like to debug your configuration files. If you would like to run gokud as a daemon, you can use Upstart or Systemd.
+</p>
+<p>Once you have gokud running, in a different terminal window, run the following command</p>
+<pre><code>$ goku list
+</code></pre>
+
+<p>This should return something list this:</p>
+<pre><code>Sidekiq       0  [worker]      unmonitored
+Unicorn       0  [web worker]  unmonitored
+ElasticSearch 0  [web search]  unmonitored
+</code></pre>
+
+<p>This shows the names of the processes loaded, their pid, their tags and status. Possible statuses are:</p>
+<ul>
+	<li>unmonitored</li>
+	<li>unknown</li>
+	<li>starting</li>
+	<li>up</li>
+	<li>stopping</li>
+	<li>draining</li>
+</ul>
+
+<p>You can now try and start a process:</p>
+<pre><code>$ goku start -p unicorn
+</code></pre>
+<p>or you can use the tags to start multiple processes with the <code>-t</code> parameter:</p>
+<pre><code>$ goku start -t web
+</code></pre>
+<p>This will start both <strong>Unicorn</strong> and <strong>ElasticSearch</strong> processes.</p>
+<p>You can also address processes by parts of their name as long as it results in a unique process:</p>
+<pre><code>$ goku start -p u
+</code></pre>
+<p>This will start the <strong>Unicorn</strong> process.</p>
+
+<p>Use the <code>stop</code> command to stop the process. This will start the StopSequence.</p>
+<pre><code>$ goku stop -p unicorn
+</code></pre>
+
+<p>If your process supports draining, you can start recycling it with the <code>recycle</code> command:</p>
+<pre><code>$ goku recycle -p unicorn
+</code></pre>
+
+<p>This will start draining the process while starting a new process with the same configuration. This means the pid you see in the <code>list</code>
+command is always the pid of the <strong>active</strong> process. To see the list of all processes (<strong>active</strong> and <strong>draining</strong>), use
+the <code>-v</code> option with the <code>list</code> command:</p>
+<pre><code>$ goku list -v
+</code></pre>
+
+<h3><a name="goku-more" class="anchor" href="#goku-more"><span class="octicon octicon-link"></span></a>Getting More</h3>
+<p>You can use the <code>help</code> command with both goku and gokud to see the list of all commands and options available.</p>
 
 </section>
 
