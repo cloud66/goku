@@ -56,6 +56,10 @@ func main() {
 	statusChange = make(chan *Process)
 
 	glog.Infof("Loading configurations from %s", flagConfName)
+	if len(files) == 0 {
+		glog.Error("No configuration files found")
+	}
+	
 	for _, file := range files {
 		loadWait.Add(1)
 		go loadConfiguration(file)
