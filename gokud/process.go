@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -299,15 +298,11 @@ func (p *Process) startProcessByExec() error {
 
 	// find the user/group
 	if p.User != "" {
-		uuid, err := user.Lookup(p.User)
+		uuid, err := lookupUserId(p.User)
 		if err != nil {
 			return err
 		}
-		uid, err := strconv.Atoi(uuid.Uid)
-		if err != nil {
-			return err
-		}
-		p.userId = uid
+		p.userId = uuid
 	}
 
 	if p.Group != "" {
