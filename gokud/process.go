@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"sync"
 	"syscall"
 	"time"
 
@@ -56,7 +55,6 @@ var (
 		{Signal: syscall.SIGQUIT, Wait: 5},
 		{Signal: syscall.SIGKILL, Wait: 0},
 	}
-	startLock sync.Mutex
 )
 
 type Process struct {
@@ -356,16 +354,16 @@ func (p *Process) startProcessByExec() error {
 			syscall.Setuid(cuid)
 			syscall.Setgid(cgid)
 		}()
-	}
 
-	if p.userId != 0 {
-		if err = syscall.Setuid(p.userId); err != nil {
-			return err
+		if p.userId != 0 {
+			if err = syscall.Setuid(p.userId); err != nil {
+				return err
+			}
 		}
-	}
-	if p.groupId != 0 {
-		if err = syscall.Setgid(p.groupId); err != nil {
-			return err
+		if p.groupId != 0 {
+			if err = syscall.Setgid(p.groupId); err != nil {
+				return err
+			}
 		}
 	}
 

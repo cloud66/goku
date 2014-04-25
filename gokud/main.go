@@ -25,6 +25,7 @@ var (
 	statusChange    chan *Process
 	VERSION         string = "dev"
 	BUILD_DATE      string = ""
+	startLock			 sync.Mutex
 )
 
 func main() {
@@ -59,7 +60,7 @@ func main() {
 	if len(files) == 0 {
 		glog.Error("No configuration files found")
 	}
-	
+
 	for _, file := range files {
 		loadWait.Add(1)
 		go loadConfiguration(file)
