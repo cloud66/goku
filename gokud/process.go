@@ -262,7 +262,10 @@ func (p *Process) sendSignalAndWait(instruction Instruction) error {
 	}
 
 	// wait
-	time.Sleep(instruction.Wait * time.Second)
+	wait := instruction.Wait * time.Second
+	glog.V(Detail).Infof("Going to wait for %s", wait)
+	time.Sleep(wait)
+	glog.V(Debug).Infof("Wait is over")
 
 	return nil
 }
