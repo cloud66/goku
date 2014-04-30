@@ -51,9 +51,9 @@ type Instruction struct {
 
 var (
 	defaultStopSequence = []Instruction{
-		{Signal: syscall.SIGTERM, Wait: 5},
-		{Signal: syscall.SIGQUIT, Wait: 5},
-		{Signal: syscall.SIGKILL, Wait: 0},
+		{Signal: syscall.SIGTERM, Wait: 5 * time.Second},
+		{Signal: syscall.SIGQUIT, Wait: 5 * time.Second},
+		{Signal: syscall.SIGKILL, Wait: 0 * time.Second},
 	}
 )
 
@@ -262,9 +262,8 @@ func (p *Process) sendSignalAndWait(instruction Instruction) error {
 	}
 
 	// wait
-	wait := instruction.Wait * time.Second
-	glog.V(Detail).Infof("Going to wait for %s (wait value is: %s)", wait, instruction.Wait)
-	time.Sleep(wait)
+	glog.V(Detail).Infof("Going to wait for %s", instruction.Wait)
+	time.Sleep(instruction.Wait)
 	glog.V(Debug).Infof("Wait is over")
 
 	return nil
