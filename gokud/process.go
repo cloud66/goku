@@ -238,7 +238,6 @@ func (p *Process) isRunning() bool {
 		glog.V(Debug).Infof("Looking for process with pid %d. %s", p.Pid, err.Error())
 		return false
 	} else {
-		p.setStatus(PS_UNMONITORED)
 		return true
 	}
 }
