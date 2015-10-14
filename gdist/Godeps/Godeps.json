@@ -1,0 +1,10 @@
+{
+	"ImportPath": "github.com/cloud66/goku/gdist",
+	"GoVersion": "go1.5.1",
+	"Deps": [
+		{
+			"ImportPath": "github.com/kr/s3",
+			"Rev": "c070c8f9a8f0032d48f0d2a77d4e382788bd8a1d"
+		}
+	]
+}
