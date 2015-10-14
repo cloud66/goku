@@ -5,25 +5,25 @@ import (
 )
 
 type StatusTuple struct {
-	Code			int
-	Message	 string
+	Code    int
+	Message string
 }
 
 type CtrlProcessSet struct {
-	Name         string
-	CallbackId   string
-	Tags         []string
-	Command      string
-	Args         []string
-	Directory    string
-	UseEnv       bool
-	Envs         []string
-	AllowDrain   bool
-	User         string
-	Group        string
-	UseStdPipe   bool
-	Draining	   []CtrlProcess
-	Active			 *CtrlProcess
+	Name       string
+	CallbackId string
+	Tags       []string
+	Command    string
+	Args       []string
+	Directory  string
+	UseEnv     bool
+	Envs       []string
+	AllowDrain bool
+	User       string
+	Group      string
+	UseStdPipe bool
+	Draining   []CtrlProcess
+	Active     *CtrlProcess
 }
 
 func (c *CtrlProcessSet) Status() string {
